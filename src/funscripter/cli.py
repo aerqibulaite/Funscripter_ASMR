@@ -102,11 +102,27 @@ def main(argv=None):
     task_status.add_argument("task_file")
     task_resume = commands.add_parser("task-resume", help="verify and recover a recorded task")
     task_resume.add_argument("task_file")
+    batch = commands.add_parser("batch", help="run a YAML batch serially with persistent child tasks")
+    batch.add_argument("--config", required=True)
+    batch.add_argument("--output", required=True, help="new batch directory; contains .batch metadata")
+    batch_status = commands.add_parser("batch-status", help="read saved batch progress")
+    batch_status.add_argument("directory")
+    batch_resume = commands.add_parser("batch-resume", help="verify and resume a serial batch")
+    batch_resume.add_argument("directory")
     for stage in (create, analyze, plan, fuse, diagnostic, archive, diff, regenerate, accept, restore):
         stage.add_argument("--task-file", help="optional task JSON outside inputs and output; default beside output")
     args = parser.parse_args(argv)
     try:
-        if args.command == "task-status":
+        if args.command == "batch":
+            from .batch import run_batch
+            result = run_batch(args.config, args.output, execute_stage)
+        elif args.command == "batch-status":
+            from .batch import batch_status
+            result = batch_status(args.directory)
+        elif args.command == "batch-resume":
+            from .batch import resume_batch
+            result = resume_batch(args.directory, execute_stage)
+        elif args.command == "task-status":
             from .tasks import task_summary
             result = task_summary(args.task_file)
         elif args.command == "task-resume":
@@ -125,7 +141,7 @@ def main(argv=None):
         print(json.dumps(result, ensure_ascii=False, indent=2))
         status = result.get("execution_status", result.get("status"))
         # Querying a failed record succeeds; running/recovering that task reports failure.
-        if args.command == "task-status":
+        if args.command in ("task-status", "batch-status"):
             return 0
         return 130 if status == "cancelled" else (2 if status == "failed" else 0)
     except (OSError, ValueError, LookupError) as exc:

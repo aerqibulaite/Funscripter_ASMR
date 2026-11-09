@@ -8,6 +8,8 @@
 
 长轨性能测量、wheel 离线安装、隔离环境回归和已验证的 Windows/Python 依赖锁见 [P3 验收记录](docs/P3-validation.md)。可运行 `python tools/benchmark.py --output workspace/performance-new --durations 60 600 3600` 生成本机基线。
 
+支持 YAML 批量串行执行、显式依赖、失败后停止/继续以及批次恢复：`python tools/run.py batch --config config/batch-example.yaml --output workspace/batch-demo`。先运行 `tools/make_demo.py` 准备示例输入；配置规则和状态查询见 [批量处理说明](docs/batch.md)。
+
 ## 快速运行
 
 需要 Python 3.11+。本机在 Python 3.13.13 验证。运行依赖锁定于 pyproject.toml；安装时按本机 pip 配置访问软件源。

@@ -1,0 +1,23 @@
+schema_version: "1"
+failure_policy: stop
+# All paths are relative to this YAML file. Run tools/make_demo.py first.
+# The batch command's --output must be workspace/batch-demo for this example.
+jobs:
+  - id: create_demo
+    command: create
+    arguments:
+      config: ../workspace/demo-input/config.yaml
+      output: ../workspace/batch-demo/project
+  - id: analyze_demo
+    command: analyze
+    depends_on: [create_demo]
+    arguments:
+      project: ../workspace/batch-demo/project
+      output: ../workspace/batch-demo/analysis
+  - id: reuse_demo
+    command: analyze
+    depends_on: [analyze_demo]
+    arguments:
+      project: ../workspace/batch-demo/project
+      reuse_analysis: ../workspace/batch-demo/analysis
+      output: ../workspace/batch-demo/analysis-reused
