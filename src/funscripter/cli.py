@@ -1,7 +1,43 @@
 import argparse
 import json
 import sys
+from types import SimpleNamespace
 from .project import create_project, reopen_project, analyze_project, plan_project
+
+
+def execute_stage(command, arguments):
+    args = SimpleNamespace(command=command, **arguments)
+    if command == "create":
+        project = create_project(args.config, args.output)
+        return {"project_id": project.project_id, "status": project.status,
+                "output": args.output, "script": project.artifacts["script"]}
+    if command == "diff-revision":
+        from .revision_workflow import diff_revision
+        return diff_revision(args.project, args.revision, args.baseline, args.profile, args.output)
+    if command == "prepare-regeneration":
+        from .revision_workflow import prepare_regeneration
+        return prepare_regeneration(args.project, args.diff, args.profile, args.output)
+    if command == "accept-candidate":
+        from .revision_workflow import accept_candidate
+        return accept_candidate(args.project, args.candidate, args.candidate_id, args.output)
+    if command == "restore-revision":
+        from .revision_workflow import restore_revision
+        return restore_revision(args.project, args.applied, args.target, args.output)
+    if command == "diagnostic":
+        from .diagnostic import create_diagnostic
+        return create_diagnostic(args.project, args.draft, args.output, args.profile)
+    if command == "archive-revision":
+        from .revisions import archive_revision
+        return archive_revision(args.project, args.baseline, args.script, args.output,
+                                args.diagnostic, args.elapsed_seconds, args.notes)
+    if command == "fuse":
+        from .fuse_project import fuse_project
+        return fuse_project(args.project, args.planning, args.output, args.profile, args.analysis)
+    if command == "plan":
+        return plan_project(args.project, args.output, args.profile, args.resume)
+    if command == "analyze":
+        return analyze_project(args.project, args.output, args.profile)
+    raise ValueError("unsupported stage command")
 
 
 def main(argv=None):
@@ -61,45 +97,36 @@ def main(argv=None):
     restore.add_argument("--applied", required=True)
     restore.add_argument("--target", choices=["parent","result"], required=True)
     restore.add_argument("--output", required=True)
+    task_status = commands.add_parser("task-status", help="read a persistent task record")
+    task_status.add_argument("task_file")
+    task_resume = commands.add_parser("task-resume", help="verify and recover a recorded task")
+    task_resume.add_argument("task_file")
+    for stage in (create, analyze, plan, fuse, diagnostic, archive, diff, regenerate, accept, restore):
+        stage.add_argument("--task-file", help="optional task JSON outside inputs and output; default beside output")
     args = parser.parse_args(argv)
     try:
-        if args.command == "create":
-            project = create_project(args.config, args.output)
-            result = {"project_id": project.project_id, "status": project.status,
-                      "output": args.output, "script": project.artifacts["script"]}
-        elif args.command == "diff-revision":
-            from .revision_workflow import diff_revision
-            result=diff_revision(args.project,args.revision,args.baseline,args.profile,args.output)
-        elif args.command == "prepare-regeneration":
-            from .revision_workflow import prepare_regeneration
-            result=prepare_regeneration(args.project,args.diff,args.profile,args.output)
-        elif args.command == "accept-candidate":
-            from .revision_workflow import accept_candidate
-            result=accept_candidate(args.project,args.candidate,args.candidate_id,args.output)
-        elif args.command == "restore-revision":
-            from .revision_workflow import restore_revision
-            result=restore_revision(args.project,args.applied,args.target,args.output)
-        elif args.command == "diagnostic":
-            from .diagnostic import create_diagnostic
-            result = create_diagnostic(args.project,args.draft,args.output,args.profile)
-        elif args.command == "archive-revision":
-            from .revisions import archive_revision
-            result = archive_revision(args.project,args.baseline,args.script,args.output,args.diagnostic,args.elapsed_seconds,args.notes)
-        elif args.command == "fuse":
-            from .fuse_project import fuse_project
-            result = fuse_project(args.project, args.planning, args.output, args.profile, args.analysis)
-        elif args.command == "plan":
-            result = plan_project(args.project, args.output, args.profile, args.resume)
-        elif args.command == "analyze":
-            result = analyze_project(args.project, args.output, args.profile)
-        else:
+        if args.command == "task-status":
+            from .tasks import task_summary
+            result = task_summary(args.task_file)
+        elif args.command == "task-resume":
+            from .tasks import resume_task
+            result = resume_task(args.task_file, execute_stage)
+        elif args.command == "inspect":
             project, timeline, media, validation = reopen_project(args.project)
             result = {"project_id": project.project_id, "status": project.status,
                       "duration_ms": media["duration_ms"], "cue_count": len(timeline.cues),
                       "issues": timeline.issues, "validation": validation,
                       "external_tools": project.external_tools}
+        else:
+            from .tasks import run_task, FIELDS
+            arguments = {key: getattr(args, key) for key in FIELDS[args.command]}
+            result = run_task(args.command, arguments, execute_stage, args.task_file)
         print(json.dumps(result, ensure_ascii=False, indent=2))
-        return 130 if result.get("status") == "cancelled" else (2 if result.get("status") == "failed" else 0)
+        status = result.get("execution_status", result.get("status"))
+        # Querying a failed record succeeds; running/recovering that task reports failure.
+        if args.command == "task-status":
+            return 0
+        return 130 if status == "cancelled" else (2 if status == "failed" else 0)
     except (OSError, ValueError, LookupError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2

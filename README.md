@@ -4,6 +4,8 @@
 
 完整进度与下一步见 [开发计划实现审计](docs/implementation-audit.md)。开发阶段 0–8 与里程碑 M1–M6 是两套编号；阶段 6、7 已有主要代码能力，阶段 8 多轴尚未实现，不能按里程碑编号推断阶段已验收。
 
+生成类 CLI 命令自动保存独立任务记录，支持 `--task-file` 指定记录路径，以及 `task-status TASK_JSON` 查询和 `task-resume TASK_JSON` 核对恢复。执行完成与待人工复核分开记录，详情见 [任务管理与恢复](docs/tasks.md)。
+
 ## 快速运行
 
 需要 Python 3.11+。本机在 Python 3.13.13 验证。运行依赖锁定于 pyproject.toml；安装时按本机 pip 配置访问软件源。
