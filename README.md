@@ -6,6 +6,8 @@
 
 生成类 CLI 命令自动保存独立任务记录，支持 `--task-file` 指定记录路径，以及 `task-status TASK_JSON` 查询和 `task-resume TASK_JSON` 核对恢复。执行完成与待人工复核分开记录，详情见 [任务管理与恢复](docs/tasks.md)。
 
+长轨性能测量、wheel 离线安装、隔离环境回归和已验证的 Windows/Python 依赖锁见 [P3 验收记录](docs/P3-validation.md)。可运行 `python tools/benchmark.py --output workspace/performance-new --durations 60 600 3600` 生成本机基线。
+
 ## 快速运行
 
 需要 Python 3.11+。本机在 Python 3.13.13 验证。运行依赖锁定于 pyproject.toml；安装时按本机 pip 配置访问软件源。
