@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "funscripter-asmr"
+version = "0.1.0"
+description = "Offline subtitle and audio motion draft workflow"
+requires-python = ">=3.11"
+dependencies = ["pydantic==2.13.4", "PyYAML==6.0.3", "numpy==2.4.4", "Pillow==12.2.0"]
+
+[project.scripts]
+funscripter = "funscripter.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

@@ -1,0 +1,31 @@
+schema_version: "1.3"
+audio: ../workspace/demo-input/track.wav
+subtitles:
+  path: ../workspace/demo-input/track.lrc
+  encoding: utf-8-sig
+  offset_ms: 0
+  apply_lrc_offset: true
+  empty_timestamp_policy: end_hint
+generation:
+  initial_position: 50
+  gap_policy: hold_position
+  presets:
+    example:
+      low: 40
+      high: 60
+      period_ms: 2000
+      up_time_ratio: 0.5
+  segments:
+    - segment_id: manual_001
+      start_ms: 2000
+      end_ms: 5000
+      preset_id: example
+    - segment_id: manual_002
+      start_ms: 7000
+      end_ms: 10000
+      preset_id: example
+# Device limits intentionally unresolved: this is an offline draft.
+device:
+  allowed_position_range: null
+  max_speed_pos_per_sec: null
+  final_interpolation: linear

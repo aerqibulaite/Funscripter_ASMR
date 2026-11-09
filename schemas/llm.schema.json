@@ -1,0 +1,138 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "backend": {
+      "enum": [
+        "llama_cpp",
+        "ollama"
+      ],
+      "title": "Backend",
+      "type": "string"
+    },
+    "base_url": {
+      "title": "Base Url",
+      "type": "string"
+    },
+    "model_id": {
+      "minLength": 1,
+      "title": "Model Id",
+      "type": "string"
+    },
+    "model_revision": {
+      "default": "unspecified",
+      "title": "Model Revision",
+      "type": "string"
+    },
+    "quantization": {
+      "default": "unspecified",
+      "title": "Quantization",
+      "type": "string"
+    },
+    "api_key_env": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Api Key Env"
+    },
+    "timeout_seconds": {
+      "default": 120.0,
+      "exclusiveMinimum": 0,
+      "maximum": 3600,
+      "title": "Timeout Seconds",
+      "type": "number"
+    },
+    "max_retries": {
+      "default": 2,
+      "maximum": 5,
+      "minimum": 0,
+      "title": "Max Retries",
+      "type": "integer"
+    },
+    "context_budget_tokens": {
+      "default": 32768,
+      "minimum": 2048,
+      "title": "Context Budget Tokens",
+      "type": "integer"
+    },
+    "max_output_tokens": {
+      "default": 4096,
+      "minimum": 128,
+      "title": "Max Output Tokens",
+      "type": "integer"
+    },
+    "safety_tokens": {
+      "default": 1024,
+      "minimum": 128,
+      "title": "Safety Tokens",
+      "type": "integer"
+    },
+    "max_chunk_cues": {
+      "default": 32,
+      "maximum": 256,
+      "minimum": 1,
+      "title": "Max Chunk Cues",
+      "type": "integer"
+    },
+    "context_cues": {
+      "default": 1,
+      "maximum": 8,
+      "minimum": 0,
+      "title": "Context Cues",
+      "type": "integer"
+    },
+    "thinking": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "const": "backend_default",
+          "type": "string"
+        }
+      ],
+      "default": "backend_default",
+      "title": "Thinking"
+    },
+    "temperature": {
+      "anyOf": [
+        {
+          "maximum": 2,
+          "minimum": 0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Temperature"
+    },
+    "top_p": {
+      "anyOf": [
+        {
+          "exclusiveMinimum": 0,
+          "maximum": 1,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Top P"
+    }
+  },
+  "required": [
+    "backend",
+    "base_url",
+    "model_id"
+  ],
+  "title": "LLMConfig",
+  "type": "object"
+}

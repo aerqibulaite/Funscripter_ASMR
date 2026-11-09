@@ -1,0 +1,343 @@
+{
+  "$defs": {
+    "FusedSegment": {
+      "additionalProperties": false,
+      "properties": {
+        "segment_id": {
+          "title": "Segment Id",
+          "type": "string"
+        },
+        "start_ms": {
+          "minimum": 0,
+          "title": "Start Ms",
+          "type": "integer"
+        },
+        "end_ms": {
+          "exclusiveMinimum": 0,
+          "title": "End Ms",
+          "type": "integer"
+        },
+        "mode": {
+          "enum": [
+            "hold_position",
+            "preset"
+          ],
+          "title": "Mode",
+          "type": "string"
+        },
+        "preset_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Preset Id"
+        },
+        "state": {
+          "$ref": "#/$defs/QualitativeState"
+        },
+        "cue_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Cue Ids",
+          "type": "array"
+        },
+        "subtitle_regions": {
+          "items": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "title": "Subtitle Regions",
+          "type": "array"
+        },
+        "event_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Event Ids",
+          "type": "array"
+        },
+        "audio_evidence_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Audio Evidence Ids",
+          "type": "array"
+        },
+        "needs_review": {
+          "const": true,
+          "title": "Needs Review",
+          "type": "boolean"
+        },
+        "review_reasons": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Review Reasons",
+          "type": "array"
+        },
+        "manual_source_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Manual Source Id"
+        },
+        "boundary_status": {
+          "enum": [
+            "manual_segment",
+            "generated_draft"
+          ],
+          "title": "Boundary Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "segment_id",
+        "start_ms",
+        "end_ms",
+        "mode",
+        "preset_id",
+        "state",
+        "cue_ids",
+        "subtitle_regions",
+        "event_ids",
+        "audio_evidence_ids",
+        "needs_review",
+        "review_reasons",
+        "manual_source_id",
+        "boundary_status"
+      ],
+      "title": "FusedSegment",
+      "type": "object"
+    },
+    "FusionProfile": {
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "const": "1.3",
+          "default": "1.3",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "preset_version": {
+          "minLength": 1,
+          "title": "Preset Version",
+          "type": "string"
+        },
+        "presets": {
+          "additionalProperties": {
+            "$ref": "#/$defs/Preset"
+          },
+          "title": "Presets",
+          "type": "object"
+        },
+        "tier_map": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Tier Map",
+          "type": "object"
+        },
+        "initial_state": {
+          "$ref": "#/$defs/QualitativeState"
+        },
+        "unknown_policy": {
+          "enum": [
+            "hold_position",
+            "maintain_state"
+          ],
+          "title": "Unknown Policy",
+          "type": "string"
+        },
+        "manual_boundaries_ms": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "title": "Manual Boundaries Ms",
+          "type": "object"
+        },
+        "use_empty_timestamp_hints": {
+          "default": false,
+          "title": "Use Empty Timestamp Hints",
+          "type": "boolean"
+        },
+        "empty_timestamp_convention_confirmed": {
+          "default": false,
+          "title": "Empty Timestamp Convention Confirmed",
+          "type": "boolean"
+        },
+        "audio_period_tolerance": {
+          "default": 0.25,
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Audio Period Tolerance",
+          "type": "number"
+        },
+        "preview_page_ms": {
+          "default": 60000,
+          "maximum": 600000,
+          "minimum": 1000,
+          "title": "Preview Page Ms",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "preset_version",
+        "presets",
+        "tier_map",
+        "unknown_policy"
+      ],
+      "title": "FusionProfile",
+      "type": "object"
+    },
+    "Preset": {
+      "additionalProperties": false,
+      "properties": {
+        "low": {
+          "maximum": 100,
+          "minimum": 0,
+          "title": "Low",
+          "type": "integer"
+        },
+        "high": {
+          "maximum": 100,
+          "minimum": 0,
+          "title": "High",
+          "type": "integer"
+        },
+        "period_ms": {
+          "minimum": 2,
+          "title": "Period Ms",
+          "type": "integer"
+        },
+        "up_time_ratio": {
+          "default": 0.5,
+          "exclusiveMaximum": 1,
+          "exclusiveMinimum": 0,
+          "title": "Up Time Ratio",
+          "type": "number"
+        }
+      },
+      "required": [
+        "low",
+        "high",
+        "period_ms"
+      ],
+      "title": "Preset",
+      "type": "object"
+    },
+    "QualitativeState": {
+      "additionalProperties": false,
+      "properties": {
+        "pace_tier": {
+          "default": "unknown",
+          "enum": [
+            "slow",
+            "medium",
+            "fast",
+            "unknown"
+          ],
+          "title": "Pace Tier",
+          "type": "string"
+        },
+        "amplitude_tier": {
+          "default": "unknown",
+          "enum": [
+            "small",
+            "medium",
+            "large",
+            "unknown"
+          ],
+          "title": "Amplitude Tier",
+          "type": "string"
+        },
+        "motion_style": {
+          "default": "unknown",
+          "enum": [
+            "rhythmic",
+            "smooth",
+            "irregular",
+            "hold",
+            "unknown"
+          ],
+          "title": "Motion Style",
+          "type": "string"
+        },
+        "paused": {
+          "default": false,
+          "title": "Paused",
+          "type": "boolean"
+        }
+      },
+      "title": "QualitativeState",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "1.3",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "profile": {
+      "$ref": "#/$defs/FusionProfile"
+    },
+    "phases": {
+      "items": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "title": "Phases",
+      "type": "array"
+    },
+    "segments": {
+      "items": {
+        "$ref": "#/$defs/FusedSegment"
+      },
+      "title": "Segments",
+      "type": "array"
+    },
+    "event_dispositions": {
+      "items": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "title": "Event Dispositions",
+      "type": "array"
+    },
+    "state_transitions": {
+      "items": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "title": "State Transitions",
+      "type": "array"
+    },
+    "status": {
+      "const": "needs_review",
+      "title": "Status",
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema_version",
+    "profile",
+    "phases",
+    "segments",
+    "event_dispositions",
+    "state_transitions",
+    "status"
+  ],
+  "title": "SegmentPlan",
+  "type": "object"
+}

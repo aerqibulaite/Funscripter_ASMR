@@ -1,0 +1,17 @@
+# Example only: endpoints must exist in the selected external script.
+preset_version: offline-local-example-v1
+presets:
+  local_small:
+    low: 45
+    high: 55
+    period_ms: 1800
+    up_time_ratio: 0.5
+windows:
+  - window_id: local_001
+    start_ms: 12000
+    end_ms: 14400
+    preset_id: local_small
+    end_transition_ms: 400
+locked_ranges:
+  - start_ms: 6000
+    end_ms: 8000

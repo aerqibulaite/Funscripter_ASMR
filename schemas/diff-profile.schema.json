@@ -1,0 +1,59 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "interpolation": {
+      "default": "unknown",
+      "enum": [
+        "linear",
+        "unknown"
+      ],
+      "title": "Interpolation",
+      "type": "string"
+    },
+    "external_interpolation_confirmed": {
+      "default": false,
+      "title": "External Interpolation Confirmed",
+      "type": "boolean"
+    },
+    "comparison_reference": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Comparison Reference"
+    },
+    "time_tolerance_ms": {
+      "default": 0,
+      "maximum": 100,
+      "minimum": 0,
+      "title": "Time Tolerance Ms",
+      "type": "integer"
+    },
+    "timing_calibration_reference": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Timing Calibration Reference"
+    },
+    "max_local_change_fraction": {
+      "default": 0.5,
+      "exclusiveMinimum": 0,
+      "maximum": 1,
+      "title": "Max Local Change Fraction",
+      "type": "number"
+    }
+  },
+  "title": "DiffProfile",
+  "type": "object"
+}

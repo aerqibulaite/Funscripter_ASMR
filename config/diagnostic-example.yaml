@@ -1,0 +1,15 @@
+# Executable paths are explicit. Override them for tools outside PATH.
+ffmpeg: ffmpeg
+ffprobe: ffprobe
+font_path: C:/Windows/Fonts/msyh.ttc
+width: 1280
+height: 720
+fps: 10
+audio_sample_rate: 48000
+audio_bitrate: 192k
+crf: 23
+render_timeout_seconds: 1800.0
+alignment_search_ms: 100
+max_alignment_error_ms: 5.0
+min_alignment_correlation: 0.8
+max_tail_padding_ms: 100.0

@@ -1,0 +1,70 @@
+# Offline demonstration presets; not device-validated.
+schema_version: '1.3'
+preset_version: offline-example-v1
+unknown_policy: hold_position
+initial_state:
+  pace_tier: unknown
+  amplitude_tier: unknown
+  motion_style: unknown
+  paused: false
+presets:
+  slow_small:
+    low: 40
+    high: 60
+    period_ms: 2000
+    up_time_ratio: 0.5
+  slow_medium:
+    low: 30
+    high: 70
+    period_ms: 2000
+    up_time_ratio: 0.5
+  slow_large:
+    low: 20
+    high: 80
+    period_ms: 2000
+    up_time_ratio: 0.5
+  medium_small:
+    low: 40
+    high: 60
+    period_ms: 1200
+    up_time_ratio: 0.5
+  medium_medium:
+    low: 30
+    high: 70
+    period_ms: 1200
+    up_time_ratio: 0.5
+  medium_large:
+    low: 20
+    high: 80
+    period_ms: 1200
+    up_time_ratio: 0.5
+  fast_small:
+    low: 40
+    high: 60
+    period_ms: 700
+    up_time_ratio: 0.5
+  fast_medium:
+    low: 30
+    high: 70
+    period_ms: 700
+    up_time_ratio: 0.5
+  fast_large:
+    low: 20
+    high: 80
+    period_ms: 700
+    up_time_ratio: 0.5
+tier_map:
+  slow/small/rhythmic: slow_small
+  slow/medium/rhythmic: slow_medium
+  slow/large/rhythmic: slow_large
+  medium/small/rhythmic: medium_small
+  medium/medium/rhythmic: medium_medium
+  medium/large/rhythmic: medium_large
+  fast/small/rhythmic: fast_small
+  fast/medium/rhythmic: fast_medium
+  fast/large/rhythmic: fast_large
+manual_boundaries_ms: {}
+use_empty_timestamp_hints: false
+empty_timestamp_convention_confirmed: false
+audio_period_tolerance: 0.25
+preview_page_ms: 60000

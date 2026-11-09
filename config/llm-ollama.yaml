@@ -1,0 +1,18 @@
+# Replace address/model with your actual deployment. No model is downloaded.
+backend: ollama
+base_url: http://127.0.0.1:11434
+model_id: replace-with-your-model-id
+model_revision: unspecified
+quantization: unspecified
+api_key_env: null
+timeout_seconds: 120.0
+max_retries: 2
+# Match the actual context window configured on the service.
+context_budget_tokens: 32768
+max_output_tokens: 4096
+safety_tokens: 1024
+max_chunk_cues: 32
+context_cues: 1
+thinking: backend_default
+temperature: null
+top_p: null

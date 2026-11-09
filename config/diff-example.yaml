@@ -1,0 +1,7 @@
+# Keep protection conservative until an actual editor/player round-trip is documented.
+interpolation: unknown
+external_interpolation_confirmed: false
+comparison_reference: null
+time_tolerance_ms: 0
+timing_calibration_reference: null
+max_local_change_fraction: 0.5

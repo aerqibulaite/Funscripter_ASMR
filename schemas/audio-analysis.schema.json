@@ -1,0 +1,99 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "frame_ms": {
+      "default": 40,
+      "maximum": 200,
+      "minimum": 10,
+      "title": "Frame Ms",
+      "type": "integer"
+    },
+    "hop_ms": {
+      "default": 10,
+      "maximum": 100,
+      "minimum": 1,
+      "title": "Hop Ms",
+      "type": "integer"
+    },
+    "block_samples": {
+      "default": 65536,
+      "maximum": 4194304,
+      "minimum": 1024,
+      "title": "Block Samples",
+      "type": "integer"
+    },
+    "bands_hz": {
+      "additionalProperties": {
+        "maxItems": 2,
+        "minItems": 2,
+        "prefixItems": [
+          {
+            "type": "number"
+          },
+          {
+            "type": "number"
+          }
+        ],
+        "type": "array"
+      },
+      "title": "Bands Hz",
+      "type": "object"
+    },
+    "silence_dbfs": {
+      "default": -60.0,
+      "maximum": -10,
+      "minimum": -120,
+      "title": "Silence Dbfs",
+      "type": "number"
+    },
+    "onset_relative_threshold": {
+      "default": 0.15,
+      "exclusiveMinimum": 0,
+      "maximum": 1,
+      "title": "Onset Relative Threshold",
+      "type": "number"
+    },
+    "periodicity_window_ms": {
+      "default": 8000,
+      "maximum": 60000,
+      "minimum": 1000,
+      "title": "Periodicity Window Ms",
+      "type": "integer"
+    },
+    "periodicity_step_ms": {
+      "default": 2000,
+      "maximum": 60000,
+      "minimum": 100,
+      "title": "Periodicity Step Ms",
+      "type": "integer"
+    },
+    "min_period_ms": {
+      "default": 250,
+      "minimum": 50,
+      "title": "Min Period Ms",
+      "type": "integer"
+    },
+    "max_period_ms": {
+      "default": 2000,
+      "minimum": 100,
+      "title": "Max Period Ms",
+      "type": "integer"
+    },
+    "min_periodicity_score": {
+      "default": 0.6,
+      "exclusiveMinimum": 0,
+      "maximum": 1,
+      "title": "Min Periodicity Score",
+      "type": "number"
+    },
+    "min_modulation_ratio": {
+      "default": 0.1,
+      "exclusiveMinimum": 0,
+      "maximum": 2,
+      "title": "Min Modulation Ratio",
+      "type": "number"
+    }
+  },
+  "title": "AudioAnalysisConfig",
+  "type": "object"
+}

@@ -1,0 +1,16 @@
+# Standalone profile for: analyze PROJECT --profile config/audio-basic.yaml --output OUTPUT
+frame_ms: 40
+hop_ms: 10
+block_samples: 65536
+bands_hz:
+  low: [40.0, 350.0]
+  mid: [350.0, 3000.0]
+  high: [3000.0, 10000.0]
+silence_dbfs: -60.0
+onset_relative_threshold: 0.15
+periodicity_window_ms: 8000
+periodicity_step_ms: 2000
+min_period_ms: 250
+max_period_ms: 2000
+min_periodicity_score: 0.6
+min_modulation_ratio: 0.1

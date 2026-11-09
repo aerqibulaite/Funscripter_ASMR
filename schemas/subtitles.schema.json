@@ -1,0 +1,172 @@
+{
+  "$defs": {
+    "Cue": {
+      "additionalProperties": false,
+      "properties": {
+        "cue_id": {
+          "title": "Cue Id",
+          "type": "string"
+        },
+        "source_line": {
+          "title": "Source Line",
+          "type": "integer"
+        },
+        "text_raw": {
+          "title": "Text Raw",
+          "type": "string"
+        },
+        "text_for_analysis": {
+          "title": "Text For Analysis",
+          "type": "string"
+        },
+        "speaker_label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Speaker Label"
+        },
+        "original_start_ms": {
+          "title": "Original Start Ms",
+          "type": "integer"
+        },
+        "start_ms": {
+          "title": "Start Ms",
+          "type": "integer"
+        },
+        "end_ms": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "End Ms"
+        },
+        "end_inferred": {
+          "default": true,
+          "title": "End Inferred",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "cue_id",
+        "source_line",
+        "text_raw",
+        "text_for_analysis",
+        "original_start_ms",
+        "start_ms",
+        "end_ms"
+      ],
+      "title": "Cue",
+      "type": "object"
+    },
+    "Marker": {
+      "additionalProperties": false,
+      "properties": {
+        "marker_id": {
+          "title": "Marker Id",
+          "type": "string"
+        },
+        "source_line": {
+          "title": "Source Line",
+          "type": "integer"
+        },
+        "original_start_ms": {
+          "title": "Original Start Ms",
+          "type": "integer"
+        },
+        "start_ms": {
+          "title": "Start Ms",
+          "type": "integer"
+        },
+        "policy": {
+          "title": "Policy",
+          "type": "string"
+        },
+        "previous_cue_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Previous Cue Ids",
+          "type": "array"
+        },
+        "next_cue_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Next Cue Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "marker_id",
+        "source_line",
+        "original_start_ms",
+        "start_ms",
+        "policy",
+        "previous_cue_ids",
+        "next_cue_ids"
+      ],
+      "title": "Marker",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "metadata": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "title": "Metadata",
+      "type": "object"
+    },
+    "lrc_offset_ms": {
+      "title": "Lrc Offset Ms",
+      "type": "integer"
+    },
+    "effective_offset_ms": {
+      "title": "Effective Offset Ms",
+      "type": "integer"
+    },
+    "cues": {
+      "items": {
+        "$ref": "#/$defs/Cue"
+      },
+      "title": "Cues",
+      "type": "array"
+    },
+    "markers": {
+      "items": {
+        "$ref": "#/$defs/Marker"
+      },
+      "title": "Markers",
+      "type": "array"
+    },
+    "issues": {
+      "items": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "title": "Issues",
+      "type": "array"
+    }
+  },
+  "required": [
+    "metadata",
+    "lrc_offset_ms",
+    "effective_offset_ms",
+    "cues",
+    "markers",
+    "issues"
+  ],
+  "title": "Timeline",
+  "type": "object"
+}

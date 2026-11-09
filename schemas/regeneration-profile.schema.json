@@ -1,0 +1,136 @@
+{
+  "$defs": {
+    "Preset": {
+      "additionalProperties": false,
+      "properties": {
+        "low": {
+          "maximum": 100,
+          "minimum": 0,
+          "title": "Low",
+          "type": "integer"
+        },
+        "high": {
+          "maximum": 100,
+          "minimum": 0,
+          "title": "High",
+          "type": "integer"
+        },
+        "period_ms": {
+          "minimum": 2,
+          "title": "Period Ms",
+          "type": "integer"
+        },
+        "up_time_ratio": {
+          "default": 0.5,
+          "exclusiveMaximum": 1,
+          "exclusiveMinimum": 0,
+          "title": "Up Time Ratio",
+          "type": "number"
+        }
+      },
+      "required": [
+        "low",
+        "high",
+        "period_ms"
+      ],
+      "title": "Preset",
+      "type": "object"
+    },
+    "RegenerationWindow": {
+      "additionalProperties": false,
+      "properties": {
+        "start_ms": {
+          "minimum": 0,
+          "title": "Start Ms",
+          "type": "integer"
+        },
+        "end_ms": {
+          "exclusiveMinimum": 0,
+          "title": "End Ms",
+          "type": "integer"
+        },
+        "window_id": {
+          "minLength": 1,
+          "title": "Window Id",
+          "type": "string"
+        },
+        "preset_id": {
+          "title": "Preset Id",
+          "type": "string"
+        },
+        "end_transition_ms": {
+          "exclusiveMinimum": 0,
+          "title": "End Transition Ms",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "start_ms",
+        "end_ms",
+        "window_id",
+        "preset_id",
+        "end_transition_ms"
+      ],
+      "title": "RegenerationWindow",
+      "type": "object"
+    },
+    "TimeRange": {
+      "additionalProperties": false,
+      "properties": {
+        "start_ms": {
+          "minimum": 0,
+          "title": "Start Ms",
+          "type": "integer"
+        },
+        "end_ms": {
+          "exclusiveMinimum": 0,
+          "title": "End Ms",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "start_ms",
+        "end_ms"
+      ],
+      "title": "TimeRange",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "preset_version": {
+      "minLength": 1,
+      "title": "Preset Version",
+      "type": "string"
+    },
+    "presets": {
+      "additionalProperties": {
+        "$ref": "#/$defs/Preset"
+      },
+      "title": "Presets",
+      "type": "object"
+    },
+    "windows": {
+      "items": {
+        "$ref": "#/$defs/RegenerationWindow"
+      },
+      "minItems": 1,
+      "title": "Windows",
+      "type": "array"
+    },
+    "locked_ranges": {
+      "items": {
+        "$ref": "#/$defs/TimeRange"
+      },
+      "title": "Locked Ranges",
+      "type": "array"
+    }
+  },
+  "required": [
+    "preset_version",
+    "presets",
+    "windows"
+  ],
+  "title": "RegenerationProfile",
+  "type": "object"
+}

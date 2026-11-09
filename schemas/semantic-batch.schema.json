@@ -1,0 +1,122 @@
+{
+  "$defs": {
+    "SemanticEvent": {
+      "additionalProperties": false,
+      "properties": {
+        "cue_id": {
+          "title": "Cue Id",
+          "type": "string"
+        },
+        "intent": {
+          "enum": [
+            "maintain",
+            "pause",
+            "resume",
+            "increase_rate",
+            "decrease_rate",
+            "unknown"
+          ],
+          "title": "Intent",
+          "type": "string"
+        },
+        "scope": {
+          "enum": [
+            "current_section",
+            "next_section",
+            "uncertain"
+          ],
+          "title": "Scope",
+          "type": "string"
+        },
+        "anchor": {
+          "enum": [
+            "cue_start",
+            "after_utterance",
+            "uncertain"
+          ],
+          "title": "Anchor",
+          "type": "string"
+        },
+        "pace_tier": {
+          "enum": [
+            "stop",
+            "slow",
+            "medium",
+            "fast",
+            "unknown"
+          ],
+          "title": "Pace Tier",
+          "type": "string"
+        },
+        "amplitude_tier": {
+          "enum": [
+            "small",
+            "medium",
+            "large",
+            "unknown"
+          ],
+          "title": "Amplitude Tier",
+          "type": "string"
+        },
+        "motion_style": {
+          "enum": [
+            "rhythmic",
+            "smooth",
+            "irregular",
+            "hold",
+            "unknown"
+          ],
+          "title": "Motion Style",
+          "type": "string"
+        },
+        "evidence": {
+          "title": "Evidence",
+          "type": "string"
+        },
+        "needs_review": {
+          "title": "Needs Review",
+          "type": "boolean"
+        },
+        "reason": {
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "cue_id",
+        "intent",
+        "scope",
+        "anchor",
+        "pace_tier",
+        "amplitude_tier",
+        "motion_style",
+        "evidence",
+        "needs_review",
+        "reason"
+      ],
+      "title": "SemanticEvent",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "1.3",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "events": {
+      "items": {
+        "$ref": "#/$defs/SemanticEvent"
+      },
+      "title": "Events",
+      "type": "array"
+    }
+  },
+  "required": [
+    "schema_version",
+    "events"
+  ],
+  "title": "SemanticBatch",
+  "type": "object"
+}

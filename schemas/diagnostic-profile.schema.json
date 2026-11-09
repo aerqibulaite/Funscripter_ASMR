@@ -1,0 +1,98 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "ffmpeg": {
+      "default": "ffmpeg",
+      "title": "Ffmpeg",
+      "type": "string"
+    },
+    "ffprobe": {
+      "default": "ffprobe",
+      "title": "Ffprobe",
+      "type": "string"
+    },
+    "font_path": {
+      "title": "Font Path",
+      "type": "string"
+    },
+    "width": {
+      "default": 1280,
+      "maximum": 3840,
+      "minimum": 640,
+      "title": "Width",
+      "type": "integer"
+    },
+    "height": {
+      "default": 720,
+      "maximum": 2160,
+      "minimum": 360,
+      "title": "Height",
+      "type": "integer"
+    },
+    "fps": {
+      "default": 10,
+      "maximum": 60,
+      "minimum": 1,
+      "title": "Fps",
+      "type": "integer"
+    },
+    "audio_sample_rate": {
+      "default": 48000,
+      "maximum": 192000,
+      "minimum": 8000,
+      "title": "Audio Sample Rate",
+      "type": "integer"
+    },
+    "audio_bitrate": {
+      "default": "192k",
+      "title": "Audio Bitrate",
+      "type": "string"
+    },
+    "crf": {
+      "default": 23,
+      "maximum": 51,
+      "minimum": 0,
+      "title": "Crf",
+      "type": "integer"
+    },
+    "render_timeout_seconds": {
+      "default": 1800.0,
+      "exclusiveMinimum": 0,
+      "title": "Render Timeout Seconds",
+      "type": "number"
+    },
+    "alignment_search_ms": {
+      "default": 100,
+      "maximum": 1000,
+      "minimum": 5,
+      "title": "Alignment Search Ms",
+      "type": "integer"
+    },
+    "max_alignment_error_ms": {
+      "default": 5.0,
+      "maximum": 100,
+      "minimum": 0,
+      "title": "Max Alignment Error Ms",
+      "type": "number"
+    },
+    "min_alignment_correlation": {
+      "default": 0.8,
+      "exclusiveMinimum": 0,
+      "maximum": 1,
+      "title": "Min Alignment Correlation",
+      "type": "number"
+    },
+    "max_tail_padding_ms": {
+      "default": 100.0,
+      "maximum": 1000,
+      "minimum": 0,
+      "title": "Max Tail Padding Ms",
+      "type": "number"
+    }
+  },
+  "required": [
+    "font_path"
+  ],
+  "title": "DiagnosticProfile",
+  "type": "object"
+}
