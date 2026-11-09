@@ -18,7 +18,7 @@ from .project import atomic_json, load_config
 # Keep replay limited to the same public operations accepted by the CLI.
 FIELDS = {
     "create": {"config", "output"},
-    "analyze": {"project", "output", "profile"},
+    "analyze": {"project", "output", "profile", "reuse_analysis"},
     "plan": {"project", "output", "profile", "resume"},
     "fuse": {"project", "planning", "analysis", "profile", "output"},
     "diagnostic": {"project", "draft", "profile", "output"},
@@ -29,7 +29,7 @@ FIELDS = {
     "restore-revision": {"project", "applied", "target", "output"},
 }
 PATH_FIELDS = {"config", "output", "project", "profile", "planning", "analysis", "draft",
-               "baseline", "script", "diagnostic", "revision", "diff", "candidate", "applied"}
+               "baseline", "script", "diagnostic", "revision", "diff", "candidate", "applied", "reuse_analysis"}
 
 
 class Task(Model):
@@ -97,6 +97,7 @@ def validate_arguments(command, arguments):
         raise ValueError("invalid task command or arguments")
     for key, value in arguments.items():
         optional = (key == "profile" and command in ("analyze", "plan")) or (
+            key == "reuse_analysis" and command == "analyze") or (
             key == "analysis" and command == "fuse") or (key == "diagnostic" and command == "archive-revision")
         if key in PATH_FIELDS:
             if optional and value is None:
@@ -125,6 +126,8 @@ def validate_location(path, arguments):
 
 def read_task(path):
     task = Task.model_validate_json(Path(path).read_text(encoding="utf-8"))
+    if task.command == "analyze":
+        task.arguments.setdefault("reuse_analysis", None)
     if task.schema_version != "1" or task.execution_status not in {
             "queued", "running", "completed", "failed", "cancelled"}:
         raise ValueError("unsupported task schema or status")

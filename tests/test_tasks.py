@@ -146,7 +146,8 @@ class TaskTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "outside input and output"):
             run_task("create", self.arguments, execute_stage, self.output / "task.json")
         self.run_create()
-        args = {"project": str(self.output), "profile": None, "output": str(self.root / "analysis")}
+        args = {"project": str(self.output), "profile": None, "reuse_analysis": None,
+                "output": str(self.root / "analysis")}
         with self.assertRaisesRegex(ValueError, "outside input and output"):
             run_task("analyze", args, execute_stage, self.output / "task.json")
 

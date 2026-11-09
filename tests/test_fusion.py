@@ -211,6 +211,23 @@ class FusionTests(unittest.TestCase):
         self.assertTrue((output / "preview.png").exists())
         self.assertIn("device_speed_limit", json.loads((output / "validation.json").read_text())["constraint_errors"])
 
+    def test_rebound_cached_analysis_does_not_allow_stale_planning_or_analysis(self):
+        planning, profile = self.publish_inputs()
+        source_analysis = self.root / "original-analysis"
+        analyze_project(self.project_dir, source_analysis)
+        self.config["subtitles"]["offset_ms"] = 100
+        self.create()
+        reused = self.root / "rebound-analysis"
+        manifest = analyze_project(self.project_dir, reused, reuse_analysis=source_analysis)
+        self.assertEqual(manifest["cache"]["status"], "hit")
+        with self.assertRaisesRegex(ValueError, "revision mismatch"):
+            fuse_project(self.project_dir, planning, self.root / "old-planning-rejected", profile, reused)
+        planning, profile = self.publish_inputs()
+        with self.assertRaisesRegex(ValueError, "revision mismatch"):
+            fuse_project(self.project_dir, planning, self.root / "old-analysis-rejected", profile, source_analysis)
+        result = fuse_project(self.project_dir, planning, self.root / "new-fusion", profile, reused)
+        self.assertTrue(result["script_exported"])
+
     def test_stored_locks_are_rejected_before_fusion(self):
         override_path = self.project_dir / "manual_overrides.json"
         atomic_json(override_path, {"schema_version": "1.3", "overrides": [], "locked_ranges": [[1000,2000]]})

@@ -83,6 +83,16 @@ JSON Schema 位于 schemas/。回归覆盖分数秒、多标签、偏移、异�
 
     python tools/run.py analyze workspace/demo-project --profile config/audio-basic.yaml --output workspace/demo-analysis-new
 
+已有分析可以显式复用声学特征，输出仍须使用新目录：
+
+    python tools/run.py analyze workspace/demo-project --reuse-analysis workspace/demo-analysis-new --output workspace/demo-analysis-reused
+
+复用前检查来源清单、文件哈希和特征时间网格。分析音频、有效分析配置、提取器实现与 NumPy 版本一致时跳过声学计算；每次都重建当前字幕摘要并绑定当前项目修订，因此修改字幕或运动预设不必重算声学特征。修改已保存项目的哈希产物仍会被拒绝；请用新配置创建独立项目，再复用旧分析。
+
+`analysis_manifest.json` 的 `cache.status` 为 `hit`、`miss` 或 `not_requested`；`cache.reasons` 记录失效原因。内容完整但依赖不匹配时重新分析，损坏、缺失或越界的缓存报错，不覆盖旧目录。未传 `--reuse-analysis` 时正常重新计算，没有自动搜索或后台缓存清理。旧规划和旧字幕摘要不会因声学缓存命中而自动变为有效，规划/融合的来源检查保持生效。
+
+NPZ 复用时仍需校验、复制和解压特征矩阵，长轨内存与耗时需在后续性能基线中测量；本功能不表示所有阶段都支持增量重算。
+
 新增 NumPy 2.4.4 依赖，升级后可重新运行 python -m pip install -e .。不需要模型、VAD、PANNs 或网络服务。默认采用项目保存的 audio_analysis 配置，也可以通过 --profile 指定独立分析 YAML。旧 M1 项目缺少此字段时使用默认值。
 
 输出 audio_features.npz（逐帧数据与列名）、audio_evidence.json（时间映射、配置、提取器哈希、候选与字幕段摘要）、audio_summary.csv 和 analysis_manifest.json（来源修订与产物哈希）。读取 NPZ 时使用 allow_pickle=False；features 矩阵的 start_sample/valid_samples 为精确样本索引，其他列包含整体/分频/各声道 RMS、dBFS、相对整轨峰值 dB 和正向 RMS 差分。

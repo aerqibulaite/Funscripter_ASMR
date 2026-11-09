@@ -9,6 +9,14 @@ import numpy as np
 ANALYZER_VERSION = "basic-acoustic-1"
 
 
+def acoustic_signature(config, input_hash):
+    config_hash = hashlib.sha256(json.dumps(config.model_dump(mode="json"), sort_keys=True).encode()).hexdigest()
+    implementation_hash = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
+    return {"input_sha256": input_hash, "config_sha256": config_hash,
+            "implementation_sha256": implementation_hash, "numpy_version": np.__version__,
+            "cache_key": hashlib.sha256((input_hash + config_hash + implementation_hash + np.__version__).encode()).hexdigest()}
+
+
 def pcm_values(raw, width, channels):
     if width == 1:
         values = (np.frombuffer(raw, dtype=np.uint8).astype(np.float64) - 128) / 128
@@ -67,12 +75,11 @@ def periodic_candidates(values, hop_ms, config, energy_floor):
 
 
 def extract_audio(path, output, config, input_hash, timeline=None):
+    from .audio_cache import summarize_cues
     output = Path(output)
     # Caller owns a staging directory; only the successful analysis is published.
     profile = config.model_dump(mode="json")
-    config_hash = hashlib.sha256(json.dumps(profile, sort_keys=True).encode()).hexdigest()
-    implementation_hash = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
-    cache_key = hashlib.sha256((input_hash + config_hash + implementation_hash + np.__version__).encode()).hexdigest()
+    signature = acoustic_signature(config, input_hash)
     matrix = None
     temporary = output / "features-working.npy"
     try:
@@ -148,24 +155,12 @@ def extract_audio(path, output, config, input_hash, timeline=None):
                 "features": features, "needs_review": True})
             if stop == len(matrix):
                 break
-        summaries = []
-        if timeline:
-            for cue in timeline.cues:
-                start, end = max(0, cue.start_ms), min(count * 1000 / rate, cue.end_ms or 0)
-                # Select frame starts on the same global grid; frames can extend across cue boundaries.
-                first = max(0, math.ceil(start / hop_ms))
-                stop = min(len(matrix), math.ceil(end / hop_ms))
-                values = matrix[first:stop, 2]
-                summaries.append({"cue_id": cue.cue_id, "start_ms": start, "end_ms": end,
-                    "status": "available" if len(values) else "no_covered_frames",
-                    "mean_rms": float(np.mean(values)) if len(values) else None,
-                    "peak_rms": float(np.max(values)) if len(values) else None})
+        summaries = summarize_cues(matrix, hop, rate, count, timeline)
         np.savez_compressed(output / "audio_features.npz", features=matrix,
                             columns=np.asarray(columns), sample_rate=np.asarray(rate), hop_samples=np.asarray(hop))
         frame_count = len(matrix)
         return {"schema_version": "1.3", "extractor": ANALYZER_VERSION, "track_id": "main",
-            "input_sha256": input_hash, "config_sha256": config_hash, "cache_key": cache_key,
-            "numpy_version": np.__version__, "implementation_sha256": implementation_hash, "profile": profile,
+            **signature, "profile": profile,
             "sample_rate": rate, "sample_count": count, "channels": channels,
             "frame_count": frame_count, "frame_samples": frame_size, "hop_samples": hop,
             "source_start_ms": 0, "frame_time_reference": "left_edge_no_centering",

@@ -114,8 +114,10 @@ def reopen_project(directory):
     return project, timeline, media, report
 
 
-def analyze_project(directory, output, profile_path=None):
+def analyze_project(directory, output, profile_path=None, reuse_analysis=None):
     from .audio import extract_audio
+    from .audio_cache import reuse_acoustics
+    from . import audio_cache
     from .models import AudioAnalysisConfig
     directory = Path(directory).resolve()
     project, timeline, media, _ = reopen_project(directory)
@@ -128,11 +130,19 @@ def analyze_project(directory, output, profile_path=None):
         raise ValueError("analysis output already exists; choose a new directory")
     if output.is_relative_to(directory):
         raise ValueError("analysis output must be outside the source project")
+    reuse_analysis = Path(reuse_analysis).resolve() if reuse_analysis else None
+    if reuse_analysis and output.is_relative_to(reuse_analysis):
+        raise ValueError("analysis output must be outside the reused analysis")
     output.parent.mkdir(parents=True, exist_ok=True)
     stage = Path(tempfile.mkdtemp(prefix=".funscripter-analysis-", dir=output.parent))
     try:
-        evidence = extract_audio(directory / project.artifacts["analysis_audio"], stage, profile,
-            project.artifact_hashes["analysis_audio"], timeline)
+        evidence, cache = None, {"status": "not_requested", "reasons": ["no_reuse_source"]}
+        if reuse_analysis:
+            evidence, cache = reuse_acoustics(reuse_analysis, stage, profile,
+                project.artifact_hashes["analysis_audio"], media, timeline)
+        if evidence is None:
+            evidence = extract_audio(directory / project.artifacts["analysis_audio"], stage, profile,
+                project.artifact_hashes["analysis_audio"], timeline)
         evidence["project_id"] = project.project_id
         evidence["source_revision_id"] = project.revision_id
         evidence["subtitle_sha256"] = project.artifact_hashes["subtitles"]
@@ -146,6 +156,7 @@ def analyze_project(directory, output, profile_path=None):
         manifest = {"schema_version": "1.3", "analysis_id": str(uuid.uuid4()),
             "project_id": project.project_id, "source_revision_id": project.revision_id,
             "status": evidence["status"], "acoustic_cache_key": evidence["cache_key"],
+            "cache": cache, "summary_implementation_sha256": sha256(audio_cache.__file__),
             "summary_subtitle_sha256": project.artifact_hashes["subtitles"],
             "artifacts": {name: sha256(stage / name) for name in
                 ["audio_features.npz", "audio_evidence.json", "audio_summary.csv"]}}

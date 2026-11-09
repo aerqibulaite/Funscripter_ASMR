@@ -36,7 +36,7 @@ def execute_stage(command, arguments):
     if command == "plan":
         return plan_project(args.project, args.output, args.profile, args.resume)
     if command == "analyze":
-        return analyze_project(args.project, args.output, args.profile)
+        return analyze_project(args.project, args.output, args.profile, args.reuse_analysis)
     raise ValueError("unsupported stage command")
 
 
@@ -52,6 +52,7 @@ def main(argv=None):
     analyze.add_argument("project")
     analyze.add_argument("--output", required=True)
     analyze.add_argument("--profile", help="optional standalone audio analysis YAML profile")
+    analyze.add_argument("--reuse-analysis", help="verify and reuse acoustics from an existing analysis bundle")
     plan = commands.add_parser("plan", help="run two-pass subtitle planning against a configured service")
     plan.add_argument("project")
     plan.add_argument("--output", required=True)
