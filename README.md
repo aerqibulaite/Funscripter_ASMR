@@ -1,6 +1,8 @@
 # Funscripter ASMR
 
-本地字幕与音频融合工具，目前提供 M1–M5 的单轴 CLI 工作流：导入音频与 LRC/SRT、基础音频分析、两遍语义规划、融合草稿、诊断视频与外部修订保护。没有自建图形界面；真实模型、真实素材与 OFS/MultiFunPlayer 的端到端验收仍待完成。
+本地字幕与音频融合工具，目前提供 M1–M5 的单轴 CLI 工作流，以及用于文件选择、本地模型配置和分步运行的桌面测试界面：导入音频与 LRC/SRT、基础音频分析、两遍语义规划、融合草稿、诊断视频与外部修订保护。真实模型、真实素材与 OFS/MultiFunPlayer 的端到端验收仍待完成。
+
+双击 `launch_gui.cmd` 或运行 `python tools/gui.py` 打开界面。支持 Ollama / llama.cpp 配置、连接与 JSON 推理测试，操作步骤见 [桌面界面说明](docs/gui.md)。
 
 字幕按格式导入，支持显式编码和时间偏移；SRT 保留原始起止时间、重叠和异常区间，问题进入复核清单。配置与边界规则见 [字幕导入说明](docs/subtitle-inputs.md)。
 
