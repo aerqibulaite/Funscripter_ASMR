@@ -70,25 +70,28 @@ class DesktopApp:
         if kind == "directory":
             value = filedialog.askdirectory(parent=self.root)
         else:
-            types = {"audio": [("音频", "*.wav *.mp3 *.flac *.ogg *.m4a"), ("所有文件", "*.*")],
-                     "subtitles": [("字幕", "*.srt *.lrc"), ("所有文件", "*.*")],
+            types = {"audio": [("音频与视频", "*.wav *.mp3 *.flac *.ogg *.m4a *.mp4 *.mkv *.webm *.mov *.avi *.m4v *.ts *.mts *.m2ts *.mpeg *.mpg *.ogv *.flv"), ("所有文件", "*.*")],
+                     "subtitles": [("字幕", "*.srt *.lrc *.vtt"), ("所有文件", "*.*")],
                      "yaml": [("YAML", "*.yaml *.yml"), ("所有文件", "*.*")]}
             value = filedialog.askopenfilename(parent=self.root, filetypes=types.get(kind, [("所有文件", "*.*")]))
         if value:
             variable.set(value)
 
     def build_source(self, frame):
-        self.field(frame, 0, "音频文件", self.inputs, "audio", browse="audio")
-        self.field(frame, 1, "字幕文件（SRT / LRC）", self.inputs, "subtitles", browse="subtitles")
+        self.field(frame, 0, "音频 / 视频文件", self.inputs, "audio", browse="audio")
+        self.field(frame, 1, "字幕（SRT / LRC / VTT）", self.inputs, "subtitles", browse="subtitles")
         executable = Path("workspace/tools/ffmpeg-binaries/ffmpeg.exe").resolve()
         self.field(frame, 2, "FFmpeg", self.inputs, "ffmpeg", str(executable) if executable.is_file() else "ffmpeg", browse="file")
         self.field(frame, 3, "字幕编码", self.inputs, "encoding", "utf-8-sig")
         self.field(frame, 4, "字幕偏移（毫秒）", self.inputs, "offset", "0")
-        self.button(frame, "创建新项目", self.create).grid(row=5, column=1, sticky="w", pady=12)
-        ttk.Separator(frame).grid(row=6, column=0, columnspan=3, sticky="ew", pady=10)
-        self.field(frame, 7, "已有项目目录", self.paths, "project", browse="directory")
-        self.button(frame, "打开并校验项目", self.inspect).grid(row=8, column=1, sticky="w", pady=8)
-        ttk.Label(frame, text="原始文件不改写。重叠、零时长、乱码等保留并报告；无有效语义时基础脚本保持初始位置。", wraplength=800).grid(row=9, column=0, columnspan=3, sticky="w", pady=12)
+        probe = executable.with_name("ffprobe.exe")
+        self.field(frame, 5, "FFprobe（视频需使用）", self.inputs, "ffprobe", str(probe) if probe.is_file() else "ffprobe", browse="file")
+        self.field(frame, 6, "音轨序号（从 0 开始）", self.inputs, "audio_stream", "0")
+        self.button(frame, "创建新项目", self.create).grid(row=7, column=1, sticky="w", pady=8)
+        ttk.Separator(frame).grid(row=8, column=0, columnspan=3, sticky="ew", pady=5)
+        self.field(frame, 9, "已有项目目录", self.paths, "project", browse="directory")
+        self.button(frame, "打开并校验项目", self.inspect).grid(row=10, column=1, sticky="w", pady=5)
+        ttk.Label(frame, text="视频按容器起点对齐音轨，字幕需使用同一时间轴。仅提取音轨，画面不参与模型分析。", wraplength=800).grid(row=11, column=0, columnspan=3, sticky="w", pady=5)
 
     def build_model(self, frame):
         self.field(frame, 0, "服务类型", self.model, "backend", "ollama", choices=("ollama", "llama_cpp"))

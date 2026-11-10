@@ -8,7 +8,7 @@ class Model(BaseModel):
 
 class SubtitleConfig(Model):
     path: str
-    format: Literal["auto", "lrc", "srt"] = "auto"
+    format: Literal["auto", "lrc", "srt", "vtt"] = "auto"
     encoding: str = "utf-8-sig"
     offset_ms: int = 0
     apply_lrc_offset: bool = True
@@ -156,6 +156,8 @@ class Config(Model):
     audio: str
     subtitles: SubtitleConfig
     ffmpeg: str = "ffmpeg"
+    ffprobe: str = "ffprobe"
+    audio_stream: int = Field(default=0, ge=0)
     llm: LLMConfig | None = None
     audio_analysis: AudioAnalysisConfig = Field(default_factory=AudioAnalysisConfig)
     generation: GenerationConfig = Field(default_factory=GenerationConfig)
@@ -166,6 +168,8 @@ class Cue(Model):
     cue_id: str
     source_line: int
     source_number: int | None = None
+    source_identifier: str | None = None
+    source_settings: str | None = None
     text_raw: str
     text_for_analysis: str
     speaker_label: str | None = None
@@ -180,6 +184,8 @@ class Marker(Model):
     marker_id: str
     source_line: int
     source_number: int | None = None
+    source_identifier: str | None = None
+    source_settings: str | None = None
     original_start_ms: int
     original_end_ms: int | None = None
     start_ms: int

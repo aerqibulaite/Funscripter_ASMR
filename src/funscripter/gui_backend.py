@@ -51,9 +51,10 @@ class DesktopController:
     def fresh(self, label):
         return self.workspace / (datetime.now().strftime("%Y%m%d-%H%M%S-") + label + "-" + uuid.uuid4().hex[:8])
 
-    def create(self, audio, subtitles, ffmpeg, encoding, offset):
+    def create(self, audio, subtitles, ffmpeg, encoding, offset, ffprobe="ffprobe", audio_stream="0"):
         values = {"audio": absolute(audio), "subtitles": {"path": absolute(subtitles),
-                  "encoding": encoding, "offset_ms": int(offset)}, "ffmpeg": ffmpeg}
+                  "encoding": encoding, "offset_ms": int(offset)}, "ffmpeg": ffmpeg,
+                  "ffprobe": ffprobe, "audio_stream": int(audio_stream)}
         config = Config.model_validate_json(json.dumps(values))
         for path in (config.audio, config.subtitles.path):
             if not Path(path).is_file():
@@ -80,4 +81,6 @@ class DesktopController:
     def inspect(project):
         saved, timeline, media, validation = reopen_project(project)
         return {"project_id": saved.project_id, "duration_ms": media["duration_ms"],
+                "source_kind": media.get("source_kind", "audio"), "selected_audio_stream": media.get("selected_audio_stream", 0),
+                "timeline_policy": media.get("timeline_policy", "decoded_audio_start_zero"),
                 "cue_count": len(timeline.cues), "issues": timeline.issues, "validation": validation}

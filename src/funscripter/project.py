@@ -53,7 +53,7 @@ def create_project(config_path, output):
         (stage / "exports").mkdir()
         source = (base / config.audio).resolve()
         subtitle = (base / config.subtitles.path).resolve()
-        media = decode_audio(source, stage / "media/analysis.wav", config.ffmpeg)
+        media = decode_audio(source, stage / "media/analysis.wav", config.ffmpeg, config.ffprobe, config.audio_stream)
         duration = media["duration_ms"]
         if duration < 1:
             raise ValueError("audio must be at least one millisecond")
@@ -83,6 +83,8 @@ def create_project(config_path, output):
                 writer.writerow([cue.cue_id, cue.start_ms, cue.end_ms, reason, cue.text_raw])
             for issue in timeline.issues:
                 writer.writerow(["", issue.get("time_ms", ""), "", issue["reason"], ""])
+            if media.get("source_kind") == "video":
+                writer.writerow(["", 0, duration, "video_container_timeline_requires_sync_review", ""])
             writer.writerow(["", 0, duration, "manual_presets_only_no_semantic_or_audio_analysis", ""])
         project = Project(project_id=str(uuid.uuid4()), revision_id=str(uuid.uuid4()),
             created_at=datetime.now(timezone.utc).isoformat(), config=config,

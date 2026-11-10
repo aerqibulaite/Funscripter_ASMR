@@ -4,7 +4,7 @@
 
 双击 `launch_gui.cmd` 或运行 `python tools/gui.py` 打开界面。支持 Ollama / llama.cpp 配置、连接与 JSON 推理测试，操作步骤见 [桌面界面说明](docs/gui.md)。
 
-字幕按格式导入，支持显式编码和时间偏移；SRT 保留原始起止时间、重叠和异常区间，问题进入复核清单。配置与边界规则见 [字幕导入说明](docs/subtitle-inputs.md)。
+字幕支持 LRC / SRT / VTT，支持显式编码和时间偏移；SRT / VTT 保留原始起止时间、重叠和异常区间，问题进入复核清单。配置与边界规则见 [字幕导入说明](docs/subtitle-inputs.md)。视频输入可选择音轨并保留容器时间偏移，详见 [视频导入说明](docs/video-inputs.md)。
 
 完整进度与下一步见 [开发计划实现审计](docs/implementation-audit.md)。开发阶段 0–8 与里程碑 M1–M6 是两套编号；阶段 6、7 已有主要代码能力，阶段 8 已开始离线契约与数值测试，实际多轴链路仍待实现和验收。
 

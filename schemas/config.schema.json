@@ -398,7 +398,8 @@
           "enum": [
             "auto",
             "lrc",
-            "srt"
+            "srt",
+            "vtt"
           ],
           "title": "Format",
           "type": "string"
@@ -454,6 +455,17 @@
       "default": "ffmpeg",
       "title": "Ffmpeg",
       "type": "string"
+    },
+    "ffprobe": {
+      "default": "ffprobe",
+      "title": "Ffprobe",
+      "type": "string"
+    },
+    "audio_stream": {
+      "default": 0,
+      "minimum": 0,
+      "title": "Audio Stream",
+      "type": "integer"
     },
     "llm": {
       "anyOf": [
