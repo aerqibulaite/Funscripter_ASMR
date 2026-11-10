@@ -21,7 +21,7 @@ def scripted_response(config, messages, schema):
             "summary": "脚本化演示，不代表模型实际判断", "trend_hint": "unknown",
             "evidence_cue_ids": [cues[0]["cue_id"]], "needs_review": True}]}
     else:
-        events = []
+        events, assessments = [], []
         for cue in data["target_cues"]:
             text = cue["text"]
             event = {"cue_id": cue["cue_id"], "intent": "maintain", "scope": "current_section", "anchor": "cue_start",
@@ -36,9 +36,13 @@ def scripted_response(config, messages, schema):
             elif text == "恢复":
                 event["intent"] = "resume"
             elif text == "这一句没有控制提示":
-                event.update(intent="unknown", evidence="")
+                assessments.append({"cue_id": cue["cue_id"], "status": "no_new_information", "reason": "中性演示：无新事件"})
+                continue
+            event.update(source_cue_ids=[cue["cue_id"]],
+                         source_evidence=[{"cue_id": cue["cue_id"], "quote": text}], statement_kind="instruction")
+            assessments.append({"cue_id": cue["cue_id"], "status": "processed", "reason": "中性脚本化演示"})
             events.append(event)
-        result = {"schema_version": "1.3", "events": events}
+        result = {"schema_version": "1.4", "events": events, "cue_assessments": assessments}
     return json.dumps(result, ensure_ascii=False), {"model": "SCRIPTED_DEMO_ONLY"}
 
 

@@ -31,6 +31,14 @@ def response_for(messages):
     task = data["task"]
     if task == "semantic":
         result = {"schema_version": "1.3", "events": [neutral_event(cue) for cue in data["target_cues"]]}
+        if data.get("semantic_contract_version") == "1.4":
+            result["schema_version"] = "1.4"
+            result["cue_assessments"] = [{"cue_id": cue["cue_id"], "status": "processed", "reason": "protocol fixture"}
+                                          for cue in data["target_cues"]]
+            for event, cue in zip(result["events"], data["target_cues"]):
+                event.update(source_cue_ids=[cue["cue_id"]],
+                             source_evidence=[{"cue_id": cue["cue_id"], "quote": cue["text"][:1]}],
+                             statement_kind="uncertain")
     else:
         if task == "merge_outline":
             phases = [phase for partial in data["partial_outlines"] for phase in partial["phases"]]

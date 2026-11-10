@@ -221,10 +221,14 @@ class TaskTests(unittest.TestCase):
             calls.append(data["task"])
             self.assertEqual(data["task"], "semantic", "outline must come from the accepted checkpoint")
             cue = data["target_cues"][0]["cue_id"]
-            return json.dumps({"schema_version": "1.3", "events": [{"cue_id": cue, "intent": "unknown",
+            return json.dumps({"schema_version": "1.4", "cue_assessments": [
+                {"cue_id": cue, "status": "processed", "reason": "protocol fixture"}],
+                "events": [{"cue_id": cue, "intent": "unknown",
                 "scope": "uncertain", "anchor": "uncertain", "pace_tier": "unknown",
                 "amplitude_tier": "unknown", "motion_style": "unknown", "evidence": "",
-                "needs_review": True, "reason": "mock response"}]}), {}
+                "needs_review": True, "reason": "mock response", "source_cue_ids": [cue],
+                "source_evidence": [{"cue_id": cue, "quote": data["target_cues"][0]["text"]}],
+                "statement_kind": "uncertain"}]}), {}
         with patch("funscripter.llm.chat", side_effect=resumed):
             code, result, stderr = self.cli("task-resume", record)
         self.assertEqual(code, 0, stderr)

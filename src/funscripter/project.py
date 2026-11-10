@@ -176,8 +176,9 @@ def analyze_project(directory, output, profile_path=None, reuse_analysis=None):
 def plan_project(directory, output, profile_path=None, resume=False, transport=None):
     from .models import LLMConfig
     from .planner import Planner, PROMPT_VERSION, digest
+    from .planning_inputs import planning_inputs
     directory = Path(directory).resolve()
-    project, timeline, _, _ = reopen_project(directory)
+    project, timeline, media, _ = reopen_project(directory)
     config = project.config.llm
     if profile_path is not None:
         raw = yaml.safe_load(Path(profile_path).read_text(encoding="utf-8-sig"))
@@ -190,6 +191,10 @@ def plan_project(directory, output, profile_path=None, resume=False, transport=N
     if output.is_relative_to(directory):
         raise ValueError("planning output must be outside the source project")
     planner = Planner(config, output, transport)
+    eligible, input_view = planning_inputs(timeline, media["duration_ms"])
+    planner.quality_flags = {row["cue_id"]: row["quality_flags"] for row in input_view["cues"]}
+    planner.assessments = [{"cue_id": row["cue_id"], "status": "excluded", "reason": "; ".join(row["reasons"])}
+                           for row in input_view["cues"] if row["status"] == "excluded"]
     signature = digest({"project_id": project.project_id, "revision_id": project.revision_id,
         "subtitles": project.artifact_hashes["subtitles"], "config": config.model_dump(mode="json"),
         "implementation": planner.implementation_hash, "prompt_version": PROMPT_VERSION})
@@ -209,35 +214,47 @@ def plan_project(directory, output, profile_path=None, resume=False, transport=N
         "config": config.model_dump(mode="json"), "prompt_version": PROMPT_VERSION,
         "implementation_sha256": planner.implementation_hash,
         "token_budget_method": "conservative_utf8_bytes_plus_schema_and_safety",
-        "status": "running", "human_review_required": True}
+        "status": "running", "human_review_required": True,
+        "semantic_schema_version": "1.4", "eligible_cue_count": len(eligible),
+        "excluded_cue_count": input_view["excluded_count"]}
+    atomic_json(output / "planning_inputs.json", input_view)
     atomic_json(run_path, run)
     events, failures = [], []
     outline = None
     try:
-        outline, strategy = planner.outline(timeline.cues)
+        outline, strategy = planner.outline(eligible) if eligible else (None, "no_eligible_cues")
         run["global_input_strategy"] = strategy
         if outline is None:
-            failures = [{"cue_id": cue.cue_id, "reason": "global_outline_failed"} for cue in timeline.cues]
+            failures = [{"cue_id": cue.cue_id, "reason": "global_outline_failed"} for cue in eligible]
         else:
             atomic_json(output / "outline.json", outline.model_dump(mode="json"))
-            events, failures = planner.semantic(timeline.cues, outline)
+            events, failures = planner.semantic(eligible, outline)
         run["status"] = "failed" if failures else "needs_review"
     except ValueError as exc:
         run.update(status="failed", error=str(exc)[:500])
-        covered = {event["cue_id"] for event in events}
-        failures = [{"cue_id": cue.cue_id, "reason": "planning_failed"} for cue in timeline.cues if cue.cue_id not in covered]
+        if (output / "semantic_events.json").exists():
+            checkpoint = json.loads((output / "semantic_events.json").read_text(encoding="utf-8"))
+            events = checkpoint["events"]
+            planner.assessments = checkpoint["cue_assessments"]
+        covered = {row["cue_id"] for row in planner.assessments if row["status"] != "failed"}
+        failures = [{"cue_id": cue.cue_id, "reason": "planning_failed"} for cue in eligible if cue.cue_id not in covered]
     except KeyboardInterrupt:
         run["status"] = "cancelled"
         # Keep any completed semantic checkpoint instead of replacing it with an empty result.
         if (output / "semantic_events.json").exists():
             checkpoint = json.loads((output / "semantic_events.json").read_text(encoding="utf-8"))
             events, failures = checkpoint["events"], checkpoint["failures"]
-        covered = {row["cue_id"] for row in events} | {row["cue_id"] for row in failures}
-        failures.extend({"cue_id": cue.cue_id, "reason": "cancelled"} for cue in timeline.cues if cue.cue_id not in covered)
-    atomic_json(output / "semantic_events.json", {"schema_version": "1.3", "events": events, "failures": failures})
+            planner.assessments = checkpoint["cue_assessments"]
+        covered = {row["cue_id"] for row in planner.assessments} | {row["cue_id"] for row in failures}
+        failures.extend({"cue_id": cue.cue_id, "reason": "cancelled"} for cue in eligible if cue.cue_id not in covered)
+    assessments = {row["cue_id"]: row for row in planner.assessments}
+    for failure in failures:
+        assessments[failure["cue_id"]] = {"cue_id": failure["cue_id"], "status": "failed", "reason": failure["reason"]}
+    planner.assessments = [assessments[cue.cue_id] for cue in timeline.cues]
+    atomic_json(output / "semantic_events.json", planner.semantic_document(events, failures))
     atomic_json(output / "request_log.json", planner.trace)
     run["event_count"], run["failure_count"] = len(events), len(failures)
     run["artifact_hashes"] = {name: sha256(output / name) for name in
-        ["outline.json", "semantic_events.json", "request_log.json"] if (output / name).exists()}
+        ["outline.json", "semantic_events.json", "request_log.json", "planning_inputs.json"] if (output / name).exists()}
     atomic_json(run_path, run)
     return run

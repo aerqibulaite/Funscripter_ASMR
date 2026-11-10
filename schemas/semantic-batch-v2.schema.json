@@ -1,0 +1,213 @@
+{
+  "$defs": {
+    "CueAssessment": {
+      "additionalProperties": false,
+      "properties": {
+        "cue_id": {
+          "title": "Cue Id",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "processed",
+            "no_new_information",
+            "ambiguous",
+            "excluded",
+            "failed"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "reason": {
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "cue_id",
+        "status",
+        "reason"
+      ],
+      "title": "CueAssessment",
+      "type": "object"
+    },
+    "SemanticEventV2": {
+      "additionalProperties": false,
+      "properties": {
+        "cue_id": {
+          "title": "Cue Id",
+          "type": "string"
+        },
+        "intent": {
+          "enum": [
+            "maintain",
+            "pause",
+            "resume",
+            "increase_rate",
+            "decrease_rate",
+            "unknown"
+          ],
+          "title": "Intent",
+          "type": "string"
+        },
+        "scope": {
+          "enum": [
+            "current_section",
+            "next_section",
+            "uncertain"
+          ],
+          "title": "Scope",
+          "type": "string"
+        },
+        "anchor": {
+          "enum": [
+            "cue_start",
+            "after_utterance",
+            "uncertain"
+          ],
+          "title": "Anchor",
+          "type": "string"
+        },
+        "pace_tier": {
+          "enum": [
+            "stop",
+            "slow",
+            "medium",
+            "fast",
+            "unknown"
+          ],
+          "title": "Pace Tier",
+          "type": "string"
+        },
+        "amplitude_tier": {
+          "enum": [
+            "small",
+            "medium",
+            "large",
+            "unknown"
+          ],
+          "title": "Amplitude Tier",
+          "type": "string"
+        },
+        "motion_style": {
+          "enum": [
+            "rhythmic",
+            "smooth",
+            "irregular",
+            "hold",
+            "unknown"
+          ],
+          "title": "Motion Style",
+          "type": "string"
+        },
+        "evidence": {
+          "title": "Evidence",
+          "type": "string"
+        },
+        "needs_review": {
+          "title": "Needs Review",
+          "type": "boolean"
+        },
+        "reason": {
+          "title": "Reason",
+          "type": "string"
+        },
+        "source_cue_ids": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Source Cue Ids",
+          "type": "array"
+        },
+        "source_evidence": {
+          "items": {
+            "$ref": "#/$defs/SourceEvidence"
+          },
+          "minItems": 1,
+          "title": "Source Evidence",
+          "type": "array"
+        },
+        "statement_kind": {
+          "enum": [
+            "instruction",
+            "description",
+            "question",
+            "conditional",
+            "quotation",
+            "uncertain"
+          ],
+          "title": "Statement Kind",
+          "type": "string"
+        }
+      },
+      "required": [
+        "cue_id",
+        "intent",
+        "scope",
+        "anchor",
+        "pace_tier",
+        "amplitude_tier",
+        "motion_style",
+        "evidence",
+        "needs_review",
+        "reason",
+        "source_cue_ids",
+        "source_evidence",
+        "statement_kind"
+      ],
+      "title": "SemanticEventV2",
+      "type": "object"
+    },
+    "SourceEvidence": {
+      "additionalProperties": false,
+      "properties": {
+        "cue_id": {
+          "title": "Cue Id",
+          "type": "string"
+        },
+        "quote": {
+          "minLength": 1,
+          "title": "Quote",
+          "type": "string"
+        }
+      },
+      "required": [
+        "cue_id",
+        "quote"
+      ],
+      "title": "SourceEvidence",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "1.4",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "cue_assessments": {
+      "items": {
+        "$ref": "#/$defs/CueAssessment"
+      },
+      "title": "Cue Assessments",
+      "type": "array"
+    },
+    "events": {
+      "items": {
+        "$ref": "#/$defs/SemanticEventV2"
+      },
+      "title": "Events",
+      "type": "array"
+    }
+  },
+  "required": [
+    "schema_version",
+    "cue_assessments",
+    "events"
+  ],
+  "title": "SemanticBatchV2",
+  "type": "object"
+}

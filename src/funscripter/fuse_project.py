@@ -9,6 +9,8 @@ from pathlib import Path
 import yaml
 from .models import FusionProfile, Outline, SemanticEvent, SemanticBatch, SegmentPlan
 from .planner import validate_events, validate_outline
+from .planning_inputs import planning_inputs
+from .semantic_contracts import parse_saved_v2
 from .fusion import build_plan, event_identity
 from .media import sha256
 from .project import atomic_json, reopen_project
@@ -36,7 +38,7 @@ def verify_source(manifest, project, subtitle_key):
         raise ValueError("source subtitle hash mismatch")
 
 
-def load_semantics(directory, project, timeline):
+def load_semantics(directory, project, timeline, duration_ms):
     manifest = read_json(directory / "planning_run.json")
     if manifest.get("status") not in ("needs_review", "failed"):
         raise ValueError("planning must be finished before fusion")
@@ -45,6 +47,22 @@ def load_semantics(directory, project, timeline):
     if "semantic_events.json" not in manifest["artifact_hashes"]:
         raise ValueError("semantic events are not covered by source hashes")
     data = read_json(directory / "semantic_events.json")
+    if data.get("schema_version") == "1.4":
+        eligible, input_view = planning_inputs(timeline, duration_ms)
+        if "planning_inputs.json" not in manifest["artifact_hashes"] or read_json(directory / "planning_inputs.json") != input_view:
+            raise ValueError("semantic planning input eligibility mismatch")
+        parse_saved_v2(data, timeline.cues, {cue.cue_id for cue in eligible})
+        outline = None
+        if eligible:
+            if "outline.json" not in manifest["artifact_hashes"]:
+                if data["events"]:
+                    raise ValueError("semantic events need a validated global outline")
+            else:
+                outline = Outline.model_validate_json((directory / "outline.json").read_text(encoding="utf-8"))
+                validate_outline(outline, eligible)
+        return data, outline, manifest
+    if data.get("schema_version") != "1.3":
+        raise ValueError("unsupported semantic schema version")
     events, failures = data.get("events", []), data.get("failures", [])
     lookup = {cue.cue_id: cue for cue in timeline.cues}
     ids = [event["cue_id"] for event in events]
@@ -83,7 +101,7 @@ def fuse_project(directory, planning, output, profile_path, analysis=None, bound
     if overrides.get("overrides") or overrides.get("locked_ranges"):
         raise ValueError("manual curve edits/locks require revision protection; fusion cannot overwrite them")
     profile = FusionProfile.model_validate_json(json.dumps(yaml.safe_load(Path(profile_path).read_text(encoding="utf-8-sig")), allow_nan=False))
-    semantic, outline, semantic_manifest = load_semantics(planning, project, timeline)
+    semantic, outline, semantic_manifest = load_semantics(planning, project, timeline, media["duration_ms"])
     audio, audio_manifest = None, None
     if analysis:
         audio_manifest = read_json(analysis / "analysis_manifest.json")
@@ -146,7 +164,7 @@ def fuse_project(directory, planning, output, profile_path, analysis=None, bound
             "boundary_manifest_sha256": sha256(boundaries / "boundary_manifest.json") if boundaries else None,
             "fusion_profile_sha256": sha256(profile_path),
             "implementation_hashes": {name: sha256(Path(__file__).with_name(name)) for name in
-                ["fusion.py", "motion.py", "models.py", "preview.py", "fuse_project.py"]},
+                ["fusion.py", "motion.py", "models.py", "preview.py", "fuse_project.py", "planning_inputs.py", "semantic_contracts.py"]},
             "artifact_hashes": {name: sha256(stage / name) for name in artifacts}}
         atomic_json(stage / "export_manifest.json", manifest)
         os.replace(stage, output)

@@ -117,6 +117,8 @@ NPZ 复用时仍需校验、复制和解压特征矩阵，长轨内存与耗时�
 
 ## M2：两遍字幕语义规划
 
+新规划已采用跨字幕事件契约 1.4：先隔离异常时间字幕，每条字幕保留处理记录，允许零/多事件及跨句原文证据；“无新信息”和“含义不确定”分开处理。旧 1.3 规划仍可读取。行为、无模型素材回归与未完成边界见[跨字幕规划说明](docs/semantic-planning-v2.md)。
+
 先填写 config/llm-llama-cpp.yaml 或 config/llm-ollama.yaml 的实际地址与模型 ID，再运行：
 
     python tools/run.py plan workspace/demo-project --profile config/llm-llama-cpp.yaml --output workspace/demo-plan

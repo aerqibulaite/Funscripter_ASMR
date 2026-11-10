@@ -3,13 +3,9 @@ from copy import deepcopy
 from .models import QualitativeState, GenerationConfig, Segment
 from .motion import generate
 from .planner import digest
+from .semantic_contracts import CORE_FIELDS, event_identity
 
 PACE = ["slow", "medium", "fast"]
-CORE_FIELDS = ["cue_id", "intent", "scope", "anchor", "pace_tier", "amplitude_tier", "motion_style", "evidence"]
-
-
-def event_identity(event):
-    return "event_" + digest({key: event[key] for key in CORE_FIELDS})[:24]
 
 
 def unknown_state():
@@ -102,6 +98,8 @@ def resolve_boundaries(timeline, candidate_doc, profile, duration_ms):
 
 
 def build_plan(project, timeline, duration_ms, semantic, outline, audio, candidate_doc, profile):
+    version2 = semantic.get("schema_version") == "1.4"
+    assessments = {row["cue_id"]: row for row in semantic.get("cue_assessments", [])}
     cues = {cue.cue_id: cue for cue in timeline.cues}
     candidate_doc, boundaries = resolve_boundaries(timeline, candidate_doc, profile, duration_ms)
     end_rows = {row["cue_id"]: row for row in candidate_doc["cues"]}
@@ -115,6 +113,13 @@ def build_plan(project, timeline, duration_ms, semantic, outline, audio, candida
                 phases.append({"phase_id": phase.phase_id, "start_ms": start, "end_ms": end})
     if not phases:
         phases = [{"phase_id": "phase_unresolved", "start_ms": 0, "end_ms": duration_ms}]
+    if version2:
+        for left, right in zip(phases, phases[1:]):
+            if left["end_ms"] > right["start_ms"]:
+                if right["start_ms"] <= left["start_ms"]:
+                    raise ValueError("chapter boundary has no positive span; review simultaneous starts")
+                left["end_ms"] = right["start_ms"]
+                left["boundary_review_reason"] = "overlapping_subtitle_chapter_boundary_clipped"
     if any(left["end_ms"] > right["start_ms"] for left, right in zip(phases, phases[1:])):
         raise ValueError("chapter time spans overlap; review simultaneous subtitle boundaries")
     cue_phase = {}
@@ -144,6 +149,10 @@ def build_plan(project, timeline, duration_ms, semantic, outline, audio, candida
             record.update(status="unresolved", reasons=["invalid_subtitle_interval"])
             if 0 <= cue.start_ms < duration_ms:
                 schedule.setdefault(cue.start_ms, []).append((None, record))
+            continue
+        if version2 and (event["statement_kind"] != "instruction" or assessments[event["cue_id"]]["status"] == "ambiguous"):
+            record.update(status="unresolved", reasons=["non_instruction_or_ambiguous_event"])
+            schedule.setdefault(cue.start_ms, []).append((None, record))
             continue
         index = cue_phase[cue.cue_id]
         phase = phases[index]
@@ -181,6 +190,18 @@ def build_plan(project, timeline, duration_ms, semantic, outline, audio, candida
             record["effective_time_ms"] = time
             record["phase_id"] = phase["phase_id"]
             schedule.setdefault(time, []).append((event, record))
+    event_cues = {event["cue_id"] for event in semantic["events"]}
+    for assessment in assessments.values():
+        cue = cues[assessment["cue_id"]]
+        status = assessment["status"]
+        if status in ("processed", "failed") or cue.cue_id in event_cues:
+            continue
+        record = {"cue_id": cue.cue_id, "event_id": None,
+                  "status": "context_only" if status == "no_new_information" else status,
+                  "reasons": ["assessment:" + status, assessment["reason"]]}
+        dispositions.append(record)
+        if status == "ambiguous" and 0 <= cue.start_ms < duration_ms:
+            schedule.setdefault(cue.start_ms, []).append((None, record))
     for failure in semantic["failures"]:
         cue = cues[failure["cue_id"]]
         record = {"cue_id": cue.cue_id, "event_id": None, "status": "failed_semantics",
@@ -208,8 +229,11 @@ def build_plan(project, timeline, duration_ms, semantic, outline, audio, candida
     resets = {phase["start_ms"]: phase["phase_id"] for phase in phases}
     for start, end in zip(edges, edges[1:]):
         if start in resets:
-            state, state_sources = profile.initial_state.model_dump(), []
-            active_reasons = ["section_initial_state"]
+            if not version2:
+                state, state_sources = profile.initial_state.model_dump(), []
+                active_reasons = ["section_initial_state"]
+            else:
+                active_reasons = list(active_reasons) + ["summary_boundary_state_preserved"]
         incoming = schedule.get(start, [])
         context_reasons = []
         actionable = [(event, record) for event, record in incoming if event is not None and
@@ -265,6 +289,8 @@ def build_plan(project, timeline, duration_ms, semantic, outline, audio, candida
             state_history.append({"time_ms": start, "input_state": before, "output_state": deepcopy(state),
                                   "event_ids": list(state_sources), "input_event_ids": previous_sources, "reasons": list(active_reasons)})
         reasons = list(active_reasons) + context_reasons
+        reasons.extend(phase["boundary_review_reason"] for phase in phases
+                       if phase.get("boundary_review_reason") and phase["start_ms"] <= start < phase["end_ms"])
         preset_id, mode = None, "hold_position"
         override = next((segment for segment in manual if segment.start_ms <= start and end <= segment.end_ms), None)
         if override:

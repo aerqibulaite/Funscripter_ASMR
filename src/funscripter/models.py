@@ -151,6 +151,29 @@ class SemanticBatch(Model):
     events: list[SemanticEvent]
 
 
+class SourceEvidence(Model):
+    cue_id: str
+    quote: str = Field(min_length=1)
+
+
+class SemanticEventV2(SemanticEvent):
+    source_cue_ids: list[str] = Field(min_length=1)
+    source_evidence: list[SourceEvidence] = Field(min_length=1)
+    statement_kind: Literal["instruction", "description", "question", "conditional", "quotation", "uncertain"]
+
+
+class CueAssessment(Model):
+    cue_id: str
+    status: Literal["processed", "no_new_information", "ambiguous", "excluded", "failed"]
+    reason: str = Field(min_length=1)
+
+
+class SemanticBatchV2(Model):
+    schema_version: Literal["1.4"]
+    cue_assessments: list[CueAssessment]
+    events: list[SemanticEventV2]
+
+
 class Config(Model):
     schema_version: Literal["1.3"] = "1.3"
     audio: str
