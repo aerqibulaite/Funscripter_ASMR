@@ -1,0 +1,31 @@
+schema_version: "1"
+basename: track
+# Numeric offline fixture only. No physical calibration is asserted.
+axes:
+  L0:
+    enabled: true
+    mode: independent
+    generation:
+      initial_position: 50
+      presets:
+        small: {low: 40, high: 60, period_ms: 2000, up_time_ratio: 0.5}
+      segments:
+        - {segment_id: example, start_ms: 2000, end_ms: 10000, preset_id: small}
+    device: {allowed_position_range: [0, 100], max_speed_pos_per_sec: 100.0}
+  L1:
+    enabled: false
+  L2:
+    enabled: false
+  R0:
+    enabled: true
+    mode: linked
+    link: {source_axis: L0, scale: -0.5, offset: 75.0}
+    device: {allowed_position_range: [0, 100], max_speed_pos_per_sec: 100.0}
+  R1:
+    enabled: false
+  R2:
+    enabled: false
+position_budgets:
+  - rule_id: numeric_example
+    references: {L0: 50, R0: 50}
+    max_total_deviation: 20.0

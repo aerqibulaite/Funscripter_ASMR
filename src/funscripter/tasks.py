@@ -27,6 +27,7 @@ FIELDS = {
     "prepare-regeneration": {"project", "diff", "profile", "output"},
     "accept-candidate": {"project", "candidate", "candidate_id", "output"},
     "restore-revision": {"project", "applied", "target", "output"},
+    "multiaxis-draft": {"project", "profile", "output"},
 }
 PATH_FIELDS = {"config", "output", "project", "profile", "planning", "analysis", "draft",
                "baseline", "script", "diagnostic", "revision", "diff", "candidate", "applied", "reuse_analysis"}

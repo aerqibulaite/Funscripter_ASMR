@@ -37,6 +37,9 @@ def execute_stage(command, arguments):
         return plan_project(args.project, args.output, args.profile, args.resume)
     if command == "analyze":
         return analyze_project(args.project, args.output, args.profile, args.reuse_analysis)
+    if command == "multiaxis-draft":
+        from .multiaxis import export_multiaxis_draft
+        return export_multiaxis_draft(args.project, args.profile, args.output)
     raise ValueError("unsupported stage command")
 
 
@@ -98,6 +101,10 @@ def main(argv=None):
     restore.add_argument("--applied", required=True)
     restore.add_argument("--target", choices=["parent","result"], required=True)
     restore.add_argument("--output", required=True)
+    multiaxis = commands.add_parser("multiaxis-draft", help="export an offline numeric axis-contract fixture")
+    multiaxis.add_argument("project")
+    multiaxis.add_argument("--profile", required=True)
+    multiaxis.add_argument("--output", required=True)
     task_status = commands.add_parser("task-status", help="read a persistent task record")
     task_status.add_argument("task_file")
     task_resume = commands.add_parser("task-resume", help="verify and recover a recorded task")
@@ -109,7 +116,7 @@ def main(argv=None):
     batch_status.add_argument("directory")
     batch_resume = commands.add_parser("batch-resume", help="verify and resume a serial batch")
     batch_resume.add_argument("directory")
-    for stage in (create, analyze, plan, fuse, diagnostic, archive, diff, regenerate, accept, restore):
+    for stage in (create, analyze, plan, fuse, diagnostic, archive, diff, regenerate, accept, restore, multiaxis):
         stage.add_argument("--task-file", help="optional task JSON outside inputs and output; default beside output")
     args = parser.parse_args(argv)
     try:

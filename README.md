@@ -2,13 +2,15 @@
 
 本地字幕与音频融合工具，目前提供 M1–M5 的单轴 CLI 工作流：导入音频与 LRC、基础音频分析、两遍语义规划、融合草稿、诊断视频与外部修订保护。没有自建图形界面；真实模型、真实素材与 OFS/MultiFunPlayer 的端到端验收仍待完成。
 
-完整进度与下一步见 [开发计划实现审计](docs/implementation-audit.md)。开发阶段 0–8 与里程碑 M1–M6 是两套编号；阶段 6、7 已有主要代码能力，阶段 8 多轴尚未实现，不能按里程碑编号推断阶段已验收。
+完整进度与下一步见 [开发计划实现审计](docs/implementation-audit.md)。开发阶段 0–8 与里程碑 M1–M6 是两套编号；阶段 6、7 已有主要代码能力，阶段 8 已开始离线契约与数值测试，实际多轴链路仍待实现和验收。
 
 生成类 CLI 命令自动保存独立任务记录，支持 `--task-file` 指定记录路径，以及 `task-status TASK_JSON` 查询和 `task-resume TASK_JSON` 核对恢复。执行完成与待人工复核分开记录，详情见 [任务管理与恢复](docs/tasks.md)。
 
 长轨性能测量、wheel 离线安装、隔离环境回归和已验证的 Windows/Python 依赖锁见 [P3 验收记录](docs/P3-validation.md)。可运行 `python tools/benchmark.py --output workspace/performance-new --durations 60 600 3600` 生成本机基线。
 
 支持 YAML 批量串行执行、显式依赖、失败后停止/继续以及批次恢复：`python tools/run.py batch --config config/batch-example.yaml --output workspace/batch-demo`。先运行 `tools/make_demo.py` 准备示例输入；配置规则和状态查询见 [批量处理说明](docs/batch.md)。
+
+阶段 8 已提供多轴离线契约准备：`multiaxis-draft PROJECT --profile config/multiaxis-offline-example.yaml --output NEW_DIR` 支持显式启用、独立预设、数值跟随和联动预算检查。当前生成数值测试草稿，实际多轴播放与硬件尚未验收，详见 [多轴离线说明](docs/multiaxis-offline.md)。
 
 ## 快速运行
 

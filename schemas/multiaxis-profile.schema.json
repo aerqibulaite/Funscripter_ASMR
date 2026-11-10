@@ -1,0 +1,329 @@
+{
+  "$defs": {
+    "AxisDraft": {
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "default": false,
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "mode": {
+          "default": "independent",
+          "enum": [
+            "independent",
+            "linked"
+          ],
+          "title": "Mode",
+          "type": "string"
+        },
+        "generation": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/GenerationConfig"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "link": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AxisLink"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "device": {
+          "$ref": "#/$defs/DeviceConfig"
+        },
+        "calibration_reference": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Calibration Reference"
+        }
+      },
+      "title": "AxisDraft",
+      "type": "object"
+    },
+    "AxisLink": {
+      "additionalProperties": false,
+      "properties": {
+        "source_axis": {
+          "enum": [
+            "L0",
+            "L1",
+            "L2",
+            "R0",
+            "R1",
+            "R2"
+          ],
+          "title": "Source Axis",
+          "type": "string"
+        },
+        "scale": {
+          "default": 1.0,
+          "title": "Scale",
+          "type": "number"
+        },
+        "offset": {
+          "default": 0.0,
+          "title": "Offset",
+          "type": "number"
+        }
+      },
+      "required": [
+        "source_axis"
+      ],
+      "title": "AxisLink",
+      "type": "object"
+    },
+    "DeviceConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "allowed_position_range": {
+          "anyOf": [
+            {
+              "maxItems": 2,
+              "minItems": 2,
+              "prefixItems": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "integer"
+                }
+              ],
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Allowed Position Range"
+        },
+        "max_speed_pos_per_sec": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Speed Pos Per Sec"
+        },
+        "final_interpolation": {
+          "const": "linear",
+          "default": "linear",
+          "title": "Final Interpolation",
+          "type": "string"
+        }
+      },
+      "title": "DeviceConfig",
+      "type": "object"
+    },
+    "GenerationConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "initial_position": {
+          "default": 50,
+          "maximum": 100,
+          "minimum": 0,
+          "title": "Initial Position",
+          "type": "integer"
+        },
+        "gap_policy": {
+          "const": "hold_position",
+          "default": "hold_position",
+          "title": "Gap Policy",
+          "type": "string"
+        },
+        "presets": {
+          "additionalProperties": {
+            "$ref": "#/$defs/Preset"
+          },
+          "title": "Presets",
+          "type": "object"
+        },
+        "segments": {
+          "items": {
+            "$ref": "#/$defs/Segment"
+          },
+          "title": "Segments",
+          "type": "array"
+        }
+      },
+      "title": "GenerationConfig",
+      "type": "object"
+    },
+    "PositionBudget": {
+      "additionalProperties": false,
+      "properties": {
+        "rule_id": {
+          "minLength": 1,
+          "title": "Rule Id",
+          "type": "string"
+        },
+        "references": {
+          "additionalProperties": {
+            "maximum": 100,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "minProperties": 2,
+          "propertyNames": {
+            "enum": [
+              "L0",
+              "L1",
+              "L2",
+              "R0",
+              "R1",
+              "R2"
+            ]
+          },
+          "title": "References",
+          "type": "object"
+        },
+        "max_total_deviation": {
+          "minimum": 0,
+          "title": "Max Total Deviation",
+          "type": "number"
+        }
+      },
+      "required": [
+        "rule_id",
+        "references",
+        "max_total_deviation"
+      ],
+      "title": "PositionBudget",
+      "type": "object"
+    },
+    "Preset": {
+      "additionalProperties": false,
+      "properties": {
+        "low": {
+          "maximum": 100,
+          "minimum": 0,
+          "title": "Low",
+          "type": "integer"
+        },
+        "high": {
+          "maximum": 100,
+          "minimum": 0,
+          "title": "High",
+          "type": "integer"
+        },
+        "period_ms": {
+          "minimum": 2,
+          "title": "Period Ms",
+          "type": "integer"
+        },
+        "up_time_ratio": {
+          "default": 0.5,
+          "exclusiveMaximum": 1,
+          "exclusiveMinimum": 0,
+          "title": "Up Time Ratio",
+          "type": "number"
+        }
+      },
+      "required": [
+        "low",
+        "high",
+        "period_ms"
+      ],
+      "title": "Preset",
+      "type": "object"
+    },
+    "Segment": {
+      "additionalProperties": false,
+      "properties": {
+        "segment_id": {
+          "title": "Segment Id",
+          "type": "string"
+        },
+        "start_ms": {
+          "minimum": 0,
+          "title": "Start Ms",
+          "type": "integer"
+        },
+        "end_ms": {
+          "exclusiveMinimum": 0,
+          "title": "End Ms",
+          "type": "integer"
+        },
+        "preset_id": {
+          "title": "Preset Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "segment_id",
+        "start_ms",
+        "end_ms",
+        "preset_id"
+      ],
+      "title": "Segment",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "1",
+      "default": "1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "basename": {
+      "default": "track",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+      "title": "Basename",
+      "type": "string"
+    },
+    "axes": {
+      "additionalProperties": {
+        "$ref": "#/$defs/AxisDraft"
+      },
+      "propertyNames": {
+        "enum": [
+          "L0",
+          "L1",
+          "L2",
+          "R0",
+          "R1",
+          "R2"
+        ]
+      },
+      "title": "Axes",
+      "type": "object"
+    },
+    "position_budgets": {
+      "items": {
+        "$ref": "#/$defs/PositionBudget"
+      },
+      "title": "Position Budgets",
+      "type": "array"
+    }
+  },
+  "required": [
+    "axes"
+  ],
+  "title": "MultiAxisProfile",
+  "type": "object"
+}
