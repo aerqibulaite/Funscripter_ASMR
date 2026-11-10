@@ -72,6 +72,7 @@
         "method": {
           "enum": [
             "empty_timestamp_hint",
+            "subtitle_display_end",
             "band_energy_drop",
             "vad_end",
             "manual_profile",

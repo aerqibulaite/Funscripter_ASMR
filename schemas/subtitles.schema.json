@@ -11,6 +11,18 @@
           "title": "Source Line",
           "type": "integer"
         },
+        "source_number": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Number"
+        },
         "text_raw": {
           "title": "Text Raw",
           "type": "string"
@@ -34,6 +46,18 @@
         "original_start_ms": {
           "title": "Original Start Ms",
           "type": "integer"
+        },
+        "original_end_ms": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Original End Ms"
         },
         "start_ms": {
           "title": "Start Ms",
@@ -79,13 +103,49 @@
           "title": "Source Line",
           "type": "integer"
         },
+        "source_number": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Number"
+        },
         "original_start_ms": {
           "title": "Original Start Ms",
           "type": "integer"
         },
+        "original_end_ms": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Original End Ms"
+        },
         "start_ms": {
           "title": "Start Ms",
           "type": "integer"
+        },
+        "end_ms": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "End Ms"
         },
         "policy": {
           "title": "Policy",

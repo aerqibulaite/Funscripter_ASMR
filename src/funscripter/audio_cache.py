@@ -16,7 +16,7 @@ def summarize_cues(matrix, hop, rate, count, timeline):
     if timeline:
         hop_ms = hop * 1000 / rate
         for cue in timeline.cues:
-            start, end = max(0, cue.start_ms), min(count * 1000 / rate, cue.end_ms or 0)
+            start, end = max(0, cue.start_ms), max(0, min(count * 1000 / rate, cue.end_ms or 0))
             first = max(0, math.ceil(start / hop_ms))
             stop = min(len(matrix), math.ceil(end / hop_ms))
             values = matrix[first:stop, 2]

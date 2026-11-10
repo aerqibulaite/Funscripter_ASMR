@@ -82,7 +82,7 @@ def parse_lrc(text, duration_ms, config):
 
 
 def candidate_document(timeline):
-    return {"schema_version": "1.3", "cues": [
+    result = {"schema_version": "1.3", "cues": [
         {"cue_id": cue.cue_id, "utterance_end_candidates": [
             {"time_ms": marker.start_ms, "method": "empty_timestamp_hint",
              "evidence_id": marker.marker_id, "status": "unaccepted",
@@ -92,3 +92,11 @@ def candidate_document(timeline):
             and marker.start_ms > cue.start_ms and cue.end_ms is not None
             and marker.start_ms <= cue.end_ms], "accepted_candidate": None}
         for cue in timeline.cues]}
+    outside = {issue.get("cue_id") for issue in timeline.issues if issue.get("reason") == "outside_audio"}
+    for cue, row in zip(timeline.cues, result["cues"]):
+        if (not cue.end_inferred and cue.end_ms is not None
+                and cue.cue_id not in outside and max(0, cue.start_ms) < cue.end_ms):
+            row["utterance_end_candidates"].append({"time_ms": cue.end_ms,
+                "method": "subtitle_display_end", "evidence_id": "display_end_" + cue.cue_id,
+                "status": "unaccepted", "reason": "subtitle_display_end_not_confirmed_utterance_end"})
+    return result

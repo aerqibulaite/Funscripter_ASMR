@@ -9,7 +9,8 @@ from pathlib import Path
 import yaml
 from .models import Config, Project, Timeline
 from .media import decode_audio, sha256
-from .lrc import parse_lrc, candidate_document
+from .lrc import candidate_document
+from .subtitles import parse_subtitles, subtitle_format
 from .motion import generate, validate_actions
 
 
@@ -56,14 +57,15 @@ def create_project(config_path, output):
         duration = media["duration_ms"]
         if duration < 1:
             raise ValueError("audio must be at least one millisecond")
-        shutil.copyfile(subtitle, stage / "inputs/subtitles.lrc")
-        timeline = parse_lrc(subtitle.read_text(encoding=config.subtitles.encoding), duration, config.subtitles)
+        subtitle_copy = "inputs/subtitles." + subtitle_format(config.subtitles)
+        shutil.copyfile(subtitle, stage / subtitle_copy)
+        timeline = parse_subtitles(subtitle.read_text(encoding=config.subtitles.encoding), duration, config.subtitles)
         script, validation = generate(config, duration)
         artifacts = {"media": "media_manifest.json", "subtitles": "subtitles.json",
             "candidates": "utterance_candidates.json", "base": "generated_base.json",
             "overrides": "manual_overrides.json", "script": "exports/track.funscript",
             "validation": "exports/validation.json", "review": "exports/review.csv",
-            "config": "config.resolved.yaml", "subtitle_source": "inputs/subtitles.lrc",
+            "config": "config.resolved.yaml", "subtitle_source": subtitle_copy,
             "analysis_audio": "media/analysis.wav"}
         values = {"media": media, "subtitles": timeline.model_dump(),
             "candidates": candidate_document(timeline), "base": script,
@@ -77,7 +79,8 @@ def create_project(config_path, output):
             writer = csv.writer(stream)
             writer.writerow(["cue_id", "start_ms", "end_ms", "reason", "text"])
             for cue in timeline.cues:
-                writer.writerow([cue.cue_id, cue.start_ms, cue.end_ms, "inferred_segment_end_not_utterance_end", cue.text_raw])
+                reason = "inferred_segment_end_not_utterance_end" if cue.end_inferred else "subtitle_display_end_not_utterance_end"
+                writer.writerow([cue.cue_id, cue.start_ms, cue.end_ms, reason, cue.text_raw])
             for issue in timeline.issues:
                 writer.writerow(["", issue.get("time_ms", ""), "", issue["reason"], ""])
             writer.writerow(["", 0, duration, "manual_presets_only_no_semantic_or_audio_analysis", ""])

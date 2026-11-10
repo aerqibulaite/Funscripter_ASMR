@@ -38,7 +38,7 @@ class BoundaryProfile(Model):
 
 class EndCandidate(Model):
     time_ms: int = Field(ge=0)
-    method: Literal["empty_timestamp_hint", "band_energy_drop", "vad_end", "manual_profile", "manual_confirmation"]
+    method: Literal["empty_timestamp_hint", "subtitle_display_end", "band_energy_drop", "vad_end", "manual_profile", "manual_confirmation"]
     evidence_id: str = Field(min_length=1)
     status: Literal["unaccepted", "inferred_draft_boundary", "human_boundary"] = "unaccepted"
     reason: str | None = None

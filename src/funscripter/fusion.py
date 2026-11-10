@@ -140,6 +140,11 @@ def build_plan(project, timeline, duration_ms, semantic, outline, audio, candida
             continue
         seen.add(identity)
         cue = cues[event["cue_id"]]
+        if (cue.end_ms is None or not 0 <= cue.start_ms < cue.end_ms <= duration_ms):
+            record.update(status="unresolved", reasons=["invalid_subtitle_interval"])
+            if 0 <= cue.start_ms < duration_ms:
+                schedule.setdefault(cue.start_ms, []).append((None, record))
+            continue
         index = cue_phase[cue.cue_id]
         phase = phases[index]
         time = None

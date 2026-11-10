@@ -442,6 +442,16 @@
           "title": "Path",
           "type": "string"
         },
+        "format": {
+          "default": "auto",
+          "enum": [
+            "auto",
+            "lrc",
+            "srt"
+          ],
+          "title": "Format",
+          "type": "string"
+        },
         "encoding": {
           "default": "utf-8-sig",
           "title": "Encoding",

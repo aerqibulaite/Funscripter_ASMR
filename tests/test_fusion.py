@@ -299,6 +299,14 @@ class FusionTests(unittest.TestCase):
         self.assertEqual(segment["preset_id"], "fast_small")
         self.assertIn("unknown_context_at_explicit_event", segment["review_reasons"])
 
+    def test_invalid_subtitle_interval_never_becomes_an_effective_event(self):
+        self.timeline.cues[0].end_ms = self.timeline.cues[0].start_ms
+        plan, _, _, _ = self.build()
+        event = plan["event_dispositions"][0]
+        self.assertEqual(event["status"], "unresolved")
+        self.assertIn("invalid_subtitle_interval", event["reasons"])
+        self.assertNotIn("effective_time_ms", event)
+
 
 if __name__ == "__main__":
     unittest.main()

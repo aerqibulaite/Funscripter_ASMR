@@ -8,6 +8,7 @@ class Model(BaseModel):
 
 class SubtitleConfig(Model):
     path: str
+    format: Literal["auto", "lrc", "srt"] = "auto"
     encoding: str = "utf-8-sig"
     offset_ms: int = 0
     apply_lrc_offset: bool = True
@@ -164,10 +165,12 @@ class Config(Model):
 class Cue(Model):
     cue_id: str
     source_line: int
+    source_number: int | None = None
     text_raw: str
     text_for_analysis: str
     speaker_label: str | None = None
     original_start_ms: int
+    original_end_ms: int | None = None
     start_ms: int
     end_ms: int | None
     end_inferred: bool = True
@@ -176,8 +179,11 @@ class Cue(Model):
 class Marker(Model):
     marker_id: str
     source_line: int
+    source_number: int | None = None
     original_start_ms: int
+    original_end_ms: int | None = None
     start_ms: int
+    end_ms: int | None = None
     policy: str
     previous_cue_ids: list[str]
     next_cue_ids: list[str]
