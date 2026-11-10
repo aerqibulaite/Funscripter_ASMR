@@ -1,5 +1,175 @@
 {
   "$defs": {
+    "ContextNote": {
+      "additionalProperties": false,
+      "properties": {
+        "cue_id": {
+          "title": "Cue Id",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "rule_definition",
+            "rule_trigger",
+            "phase_transition",
+            "state_continuation",
+            "scene_inference"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "summary": {
+          "maxLength": 600,
+          "minLength": 1,
+          "title": "Summary",
+          "type": "string"
+        },
+        "basis": {
+          "enum": [
+            "explicit",
+            "inferred"
+          ],
+          "title": "Basis",
+          "type": "string"
+        },
+        "source_cue_ids": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Source Cue Ids",
+          "type": "array"
+        },
+        "source_evidence": {
+          "items": {
+            "$ref": "#/$defs/SourceEvidence"
+          },
+          "minItems": 1,
+          "title": "Source Evidence",
+          "type": "array"
+        },
+        "control": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ControlDirective"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "cue_id",
+        "kind",
+        "summary",
+        "basis",
+        "source_cue_ids",
+        "source_evidence"
+      ],
+      "title": "ContextNote",
+      "type": "object"
+    },
+    "ControlDirective": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "enum": [
+            "countdown",
+            "rhythm_follow",
+            "repetition"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "sequence_cue_id": {
+          "title": "Sequence Cue Id",
+          "type": "string"
+        },
+        "status": {
+          "default": "update",
+          "enum": [
+            "update",
+            "reset",
+            "end"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "progress": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CountdownProgress"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "count": {
+          "anyOf": [
+            {
+              "maximum": 10000,
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Count"
+        },
+        "unit": {
+          "default": "unknown",
+          "enum": [
+            "single_travel",
+            "round_trip",
+            "unknown"
+          ],
+          "title": "Unit",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "sequence_cue_id"
+      ],
+      "title": "ControlDirective",
+      "type": "object"
+    },
+    "CountdownProgress": {
+      "additionalProperties": false,
+      "properties": {
+        "start_value": {
+          "maximum": 10000,
+          "minimum": 0,
+          "title": "Start Value",
+          "type": "integer"
+        },
+        "end_value": {
+          "maximum": 10000,
+          "minimum": 0,
+          "title": "End Value",
+          "type": "integer"
+        },
+        "current_value": {
+          "maximum": 10000,
+          "minimum": 0,
+          "title": "Current Value",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "start_value",
+        "end_value",
+        "current_value"
+      ],
+      "title": "CountdownProgress",
+      "type": "object"
+    },
     "CueAssessment": {
       "additionalProperties": false,
       "properties": {
@@ -41,6 +211,8 @@
         },
         "intent": {
           "enum": [
+            "start",
+            "continue",
             "maintain",
             "pause",
             "resume",
@@ -200,6 +372,13 @@
         "$ref": "#/$defs/SemanticEventV2"
       },
       "title": "Events",
+      "type": "array"
+    },
+    "context_notes": {
+      "items": {
+        "$ref": "#/$defs/ContextNote"
+      },
+      "title": "Context Notes",
       "type": "array"
     }
   },

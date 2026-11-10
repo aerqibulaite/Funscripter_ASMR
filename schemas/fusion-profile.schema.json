@@ -36,6 +36,27 @@
       "title": "Preset",
       "type": "object"
     },
+    "ProgressCurvePoint": {
+      "additionalProperties": false,
+      "properties": {
+        "at": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "At",
+          "type": "number"
+        },
+        "preset_id": {
+          "title": "Preset Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "at",
+        "preset_id"
+      ],
+      "title": "ProgressCurvePoint",
+      "type": "object"
+    },
     "QualitativeState": {
       "additionalProperties": false,
       "properties": {
@@ -112,6 +133,39 @@
     },
     "initial_state": {
       "$ref": "#/$defs/QualitativeState"
+    },
+    "action_defaults": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/QualitativeState"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "progress_curve": {
+      "items": {
+        "$ref": "#/$defs/ProgressCurvePoint"
+      },
+      "title": "Progress Curve",
+      "type": "array"
+    },
+    "allow_inferred_controls": {
+      "default": false,
+      "title": "Allow Inferred Controls",
+      "type": "boolean"
+    },
+    "rhythm_anchors_ms": {
+      "additionalProperties": {
+        "items": {
+          "type": "integer"
+        },
+        "type": "array"
+      },
+      "title": "Rhythm Anchors Ms",
+      "type": "object"
     },
     "unknown_policy": {
       "enum": [

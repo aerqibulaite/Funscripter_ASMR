@@ -1,0 +1,671 @@
+{
+  "schema_version": "1.4",
+  "cue_assessments": [
+    {
+      "cue_id": "cue_000053",
+      "status": "processed",
+      "reason": "人工编写的部分语义参考；包含事件或情境笔记，不代表全轨已复核。"
+    },
+    {
+      "cue_id": "cue_000055",
+      "status": "processed",
+      "reason": "人工编写的部分语义参考；包含事件或情境笔记，不代表全轨已复核。"
+    },
+    {
+      "cue_id": "cue_000073",
+      "status": "processed",
+      "reason": "人工编写的部分语义参考；包含事件或情境笔记，不代表全轨已复核。"
+    },
+    {
+      "cue_id": "cue_000075",
+      "status": "processed",
+      "reason": "人工编写的部分语义参考；包含事件或情境笔记，不代表全轨已复核。"
+    },
+    {
+      "cue_id": "cue_000077",
+      "status": "processed",
+      "reason": "人工编写的部分语义参考；包含事件或情境笔记，不代表全轨已复核。"
+    },
+    {
+      "cue_id": "cue_000079",
+      "status": "processed",
+      "reason": "人工编写的部分语义参考；包含事件或情境笔记，不代表全轨已复核。"
+    },
+    {
+      "cue_id": "cue_000133",
+      "status": "processed",
+      "reason": "人工编写的部分语义参考；包含事件或情境笔记，不代表全轨已复核。"
+    },
+    {
+      "cue_id": "cue_000153",
+      "status": "processed",
+      "reason": "人工编写的部分语义参考；包含事件或情境笔记，不代表全轨已复核。"
+    },
+    {
+      "cue_id": "cue_000207",
+      "status": "processed",
+      "reason": "人工编写的部分语义参考；包含事件或情境笔记，不代表全轨已复核。"
+    },
+    {
+      "cue_id": "cue_000237",
+      "status": "processed",
+      "reason": "人工编写的部分语义参考；包含事件或情境笔记，不代表全轨已复核。"
+    },
+    {
+      "cue_id": "cue_000275",
+      "status": "processed",
+      "reason": "人工编写的部分语义参考；包含事件或情境笔记，不代表全轨已复核。"
+    },
+    {
+      "cue_id": "cue_000375",
+      "status": "processed",
+      "reason": "人工编写的部分语义参考；包含事件或情境笔记，不代表全轨已复核。"
+    },
+    {
+      "cue_id": "cue_000397",
+      "status": "processed",
+      "reason": "人工编写的部分语义参考；包含事件或情境笔记，不代表全轨已复核。"
+    },
+    {
+      "cue_id": "cue_000405",
+      "status": "processed",
+      "reason": "人工编写的部分语义参考；包含事件或情境笔记，不代表全轨已复核。"
+    },
+    {
+      "cue_id": "cue_000541",
+      "status": "processed",
+      "reason": "人工编写的部分语义参考；包含事件或情境笔记，不代表全轨已复核。"
+    },
+    {
+      "cue_id": "cue_000545",
+      "status": "processed",
+      "reason": "人工编写的部分语义参考；包含事件或情境笔记，不代表全轨已复核。"
+    },
+    {
+      "cue_id": "cue_000657",
+      "status": "processed",
+      "reason": "人工编写的部分语义参考；包含事件或情境笔记，不代表全轨已复核。"
+    },
+    {
+      "cue_id": "cue_000683",
+      "status": "processed",
+      "reason": "人工编写的部分语义参考；包含事件或情境笔记，不代表全轨已复核。"
+    },
+    {
+      "cue_id": "cue_000687",
+      "status": "processed",
+      "reason": "人工编写的部分语义参考；包含事件或情境笔记，不代表全轨已复核。"
+    },
+    {
+      "cue_id": "cue_000779",
+      "status": "processed",
+      "reason": "人工编写的部分语义参考；包含事件或情境笔记，不代表全轨已复核。"
+    }
+  ],
+  "events": [
+    {
+      "cue_id": "cue_000079",
+      "intent": "start",
+      "scope": "current_section",
+      "anchor": "cue_start",
+      "pace_tier": "unknown",
+      "amplitude_tier": "unknown",
+      "motion_style": "unknown",
+      "evidence": "10",
+      "needs_review": true,
+      "reason": "依据已有规则推断开始；字幕起点只是候选锚点，需复核宣布开始与口令的生效关系。",
+      "source_cue_ids": [
+        "cue_000079",
+        "cue_000069",
+        "cue_000077"
+      ],
+      "source_evidence": [
+        {
+          "cue_id": "cue_000079",
+          "quote": "10"
+        },
+        {
+          "cue_id": "cue_000069",
+          "quote": "听到10就确定要进入状态了嘛"
+        },
+        {
+          "cue_id": "cue_000077",
+          "quote": "说明结束"
+        }
+      ],
+      "statement_kind": "instruction"
+    },
+    {
+      "cue_id": "cue_000133",
+      "intent": "pause",
+      "scope": "current_section",
+      "anchor": "cue_start",
+      "pace_tier": "unknown",
+      "amplitude_tier": "unknown",
+      "motion_style": "unknown",
+      "evidence": "等着",
+      "needs_review": false,
+      "reason": "暂停当前活动，保留此前活动参数以便恢复。",
+      "source_cue_ids": [
+        "cue_000133",
+        "cue_000073"
+      ],
+      "source_evidence": [
+        {
+          "cue_id": "cue_000133",
+          "quote": "等着"
+        },
+        {
+          "cue_id": "cue_000073",
+          "quote": "在我说“等着”的时候就要中断"
+        }
+      ],
+      "statement_kind": "instruction"
+    },
+    {
+      "cue_id": "cue_000153",
+      "intent": "continue",
+      "scope": "current_section",
+      "anchor": "cue_start",
+      "pace_tier": "unknown",
+      "amplitude_tier": "unknown",
+      "motion_style": "unknown",
+      "evidence": "继续",
+      "needs_review": false,
+      "reason": "此前已经暂停，此处“继续”应恢复此前活动，不能维持暂停。",
+      "source_cue_ids": [
+        "cue_000153",
+        "cue_000133"
+      ],
+      "source_evidence": [
+        {
+          "cue_id": "cue_000153",
+          "quote": "继续"
+        },
+        {
+          "cue_id": "cue_000133",
+          "quote": "等着"
+        }
+      ],
+      "statement_kind": "instruction"
+    },
+    {
+      "cue_id": "cue_000207",
+      "intent": "resume",
+      "scope": "current_section",
+      "anchor": "cue_start",
+      "pace_tier": "unknown",
+      "amplitude_tier": "unknown",
+      "motion_style": "unknown",
+      "evidence": "休息够了吧？要去了哦",
+      "needs_review": true,
+      "reason": "结合休息结束的承接关系推断恢复；不从该句猜测速度或幅度。",
+      "source_cue_ids": [
+        "cue_000207"
+      ],
+      "source_evidence": [
+        {
+          "cue_id": "cue_000207",
+          "quote": "休息够了吧？要去了哦"
+        }
+      ],
+      "statement_kind": "instruction"
+    },
+    {
+      "cue_id": "cue_000405",
+      "intent": "continue",
+      "scope": "current_section",
+      "anchor": "cue_start",
+      "pace_tier": "unknown",
+      "amplitude_tier": "unknown",
+      "motion_style": "unknown",
+      "evidence": "手都不能停",
+      "needs_review": false,
+      "reason": "否定停止，要求活动继续；若当前暂停，则需要恢复，结果限制不等于停止动作。",
+      "source_cue_ids": [
+        "cue_000405"
+      ],
+      "source_evidence": [
+        {
+          "cue_id": "cue_000405",
+          "quote": "手都不能停"
+        }
+      ],
+      "statement_kind": "instruction"
+    },
+    {
+      "cue_id": "cue_000541",
+      "intent": "start",
+      "scope": "current_section",
+      "anchor": "cue_start",
+      "pace_tier": "unknown",
+      "amplitude_tier": "unknown",
+      "motion_style": "unknown",
+      "evidence": "开始第二次吧",
+      "needs_review": false,
+      "reason": "开始新一轮；可继承已确认参数，缺失参数留给显式配置。",
+      "source_cue_ids": [
+        "cue_000541"
+      ],
+      "source_evidence": [
+        {
+          "cue_id": "cue_000541",
+          "quote": "开始第二次吧"
+        }
+      ],
+      "statement_kind": "instruction"
+    },
+    {
+      "cue_id": "cue_000545",
+      "intent": "increase_rate",
+      "scope": "current_section",
+      "anchor": "cue_start",
+      "pace_tier": "unknown",
+      "amplitude_tier": "unknown",
+      "motion_style": "unknown",
+      "evidence": "加快速度",
+      "needs_review": false,
+      "reason": "只表达相对加快，不将该句自动改写成绝对高速。",
+      "source_cue_ids": [
+        "cue_000545"
+      ],
+      "source_evidence": [
+        {
+          "cue_id": "cue_000545",
+          "quote": "加快速度"
+        }
+      ],
+      "statement_kind": "instruction"
+    },
+    {
+      "cue_id": "cue_000657",
+      "intent": "maintain",
+      "scope": "current_section",
+      "anchor": "cue_start",
+      "pace_tier": "fast",
+      "amplitude_tier": "unknown",
+      "motion_style": "unknown",
+      "evidence": "配合着快速的套弄音",
+      "needs_review": true,
+      "reason": "保留明确的快速语义及当前活动；其声音周期与具体数值未知，声音同步须复核。",
+      "source_cue_ids": [
+        "cue_000657"
+      ],
+      "source_evidence": [
+        {
+          "cue_id": "cue_000657",
+          "quote": "配合着快速的套弄音"
+        }
+      ],
+      "statement_kind": "instruction"
+    },
+    {
+      "cue_id": "cue_000683",
+      "intent": "increase_rate",
+      "scope": "current_section",
+      "anchor": "cue_start",
+      "pace_tier": "unknown",
+      "amplitude_tier": "unknown",
+      "motion_style": "unknown",
+      "evidence": "太拖拉会赶不上倒数的哟",
+      "needs_review": true,
+      "reason": "结合相邻否定缓慢的要求，候选解释为加快；属于间接指示，需复核。",
+      "source_cue_ids": [
+        "cue_000683",
+        "cue_000685"
+      ],
+      "source_evidence": [
+        {
+          "cue_id": "cue_000683",
+          "quote": "太拖拉会赶不上倒数的哟"
+        },
+        {
+          "cue_id": "cue_000685",
+          "quote": "慢吞吞的"
+        }
+      ],
+      "statement_kind": "instruction"
+    },
+    {
+      "cue_id": "cue_000687",
+      "intent": "maintain",
+      "scope": "current_section",
+      "anchor": "cue_start",
+      "pace_tier": "fast",
+      "amplitude_tier": "unknown",
+      "motion_style": "unknown",
+      "evidence": "用这个极限速度",
+      "needs_review": true,
+      "reason": "“这个”承接前文速度；保持已有快速目标，不因重申同档位而停止。",
+      "source_cue_ids": [
+        "cue_000687",
+        "cue_000657"
+      ],
+      "source_evidence": [
+        {
+          "cue_id": "cue_000687",
+          "quote": "用这个极限速度"
+        },
+        {
+          "cue_id": "cue_000657",
+          "quote": "快速的"
+        }
+      ],
+      "statement_kind": "instruction"
+    },
+    {
+      "cue_id": "cue_000779",
+      "intent": "pause",
+      "scope": "current_section",
+      "anchor": "cue_start",
+      "pace_tier": "unknown",
+      "amplitude_tier": "unknown",
+      "motion_style": "unknown",
+      "evidence": "好的，结束了",
+      "needs_review": false,
+      "reason": "以暂停事件表达当前执行层的结束效果，并用阶段笔记保存结束含义。",
+      "source_cue_ids": [
+        "cue_000779"
+      ],
+      "source_evidence": [
+        {
+          "cue_id": "cue_000779",
+          "quote": "好的，结束了"
+        }
+      ],
+      "statement_kind": "instruction"
+    }
+  ],
+  "context_notes": [
+    {
+      "cue_id": "cue_000053",
+      "kind": "phase_transition",
+      "summary": "当前进入说明阶段，登记后续规则，不立即执行规则中的动作。",
+      "basis": "explicit",
+      "source_cue_ids": [
+        "cue_000053"
+      ],
+      "source_evidence": [
+        {
+          "cue_id": "cue_000053",
+          "quote": "规则说明"
+        }
+      ]
+    },
+    {
+      "cue_id": "cue_000055",
+      "kind": "rule_definition",
+      "summary": "后续活动与倒计时进度相关；原文未给出数字到运动频率的换算。",
+      "basis": "explicit",
+      "source_cue_ids": [
+        "cue_000055",
+        "cue_000053",
+        "cue_000057",
+        "cue_000069"
+      ],
+      "source_evidence": [
+        {
+          "cue_id": "cue_000055",
+          "quote": "跟着我的倒计时"
+        },
+        {
+          "cue_id": "cue_000053",
+          "quote": "规则说明"
+        },
+        {
+          "cue_id": "cue_000057",
+          "quote": "计时从10开始数起"
+        },
+        {
+          "cue_id": "cue_000069",
+          "quote": "听到10就确定要进入状态了嘛"
+        }
+      ]
+    },
+    {
+      "cue_id": "cue_000073",
+      "kind": "rule_definition",
+      "summary": "当前定义等待口令：实际听到该口令时中断活动；本句不是即时暂停。",
+      "basis": "explicit",
+      "source_cue_ids": [
+        "cue_000073"
+      ],
+      "source_evidence": [
+        {
+          "cue_id": "cue_000073",
+          "quote": "在我说“等着”的时候就要中断"
+        }
+      ]
+    },
+    {
+      "cue_id": "cue_000075",
+      "kind": "state_continuation",
+      "summary": "“那时”继承前句的条件，继续解释触发后的休息状态，不立刻暂停。",
+      "basis": "explicit",
+      "source_cue_ids": [
+        "cue_000075",
+        "cue_000073"
+      ],
+      "source_evidence": [
+        {
+          "cue_id": "cue_000075",
+          "quote": "那时"
+        },
+        {
+          "cue_id": "cue_000073",
+          "quote": "在我说“等着”的时候就要中断"
+        }
+      ]
+    },
+    {
+      "cue_id": "cue_000077",
+      "kind": "phase_transition",
+      "summary": "说明结束，开始转入活动；宣布开始与后续数字口令之间的实际生效位置需复核。",
+      "basis": "explicit",
+      "source_cue_ids": [
+        "cue_000077"
+      ],
+      "source_evidence": [
+        {
+          "cue_id": "cue_000077",
+          "quote": "说明结束"
+        }
+      ]
+    },
+    {
+      "cue_id": "cue_000079",
+      "kind": "rule_trigger",
+      "summary": "结合说明结束及进入状态的规则，将首个数字视为候选开始触发。",
+      "basis": "inferred",
+      "source_cue_ids": [
+        "cue_000079",
+        "cue_000069",
+        "cue_000077"
+      ],
+      "source_evidence": [
+        {
+          "cue_id": "cue_000079",
+          "quote": "10"
+        },
+        {
+          "cue_id": "cue_000069",
+          "quote": "听到10就确定要进入状态了嘛"
+        },
+        {
+          "cue_id": "cue_000077",
+          "quote": "说明结束"
+        }
+      ]
+    },
+    {
+      "cue_id": "cue_000133",
+      "kind": "rule_trigger",
+      "summary": "等待口令在当前出现，触发此前定义的暂停规则。",
+      "basis": "explicit",
+      "source_cue_ids": [
+        "cue_000133",
+        "cue_000073"
+      ],
+      "source_evidence": [
+        {
+          "cue_id": "cue_000133",
+          "quote": "等着"
+        },
+        {
+          "cue_id": "cue_000073",
+          "quote": "在我说“等着”的时候就要中断"
+        }
+      ]
+    },
+    {
+      "cue_id": "cue_000237",
+      "kind": "state_continuation",
+      "summary": "描述持续时间延长；不据此增加或降低频率。",
+      "basis": "explicit",
+      "source_cue_ids": [
+        "cue_000237"
+      ],
+      "source_evidence": [
+        {
+          "cue_id": "cue_000237",
+          "quote": "时间也变长了呢"
+        }
+      ]
+    },
+    {
+      "cue_id": "cue_000275",
+      "kind": "rule_trigger",
+      "summary": "重复等待口令；前文已要求停止，因此可以确认等待状态而不重复产生新的状态变化。",
+      "basis": "explicit",
+      "source_cue_ids": [
+        "cue_000275",
+        "cue_000073",
+        "cue_000269"
+      ],
+      "source_evidence": [
+        {
+          "cue_id": "cue_000275",
+          "quote": "等着！"
+        },
+        {
+          "cue_id": "cue_000073",
+          "quote": "在我说“等着”的时候就要中断"
+        },
+        {
+          "cue_id": "cue_000269",
+          "quote": "停下来"
+        }
+      ]
+    },
+    {
+      "cue_id": "cue_000375",
+      "kind": "state_continuation",
+      "summary": "当前约束针对尚未获准的结果，不能据此直接停止机械动作；是否停止需要独立动作证据。",
+      "basis": "explicit",
+      "source_cue_ids": [
+        "cue_000375"
+      ],
+      "source_evidence": [
+        {
+          "cue_id": "cue_000375",
+          "quote": "我还没让你"
+        }
+      ]
+    },
+    {
+      "cue_id": "cue_000397",
+      "kind": "scene_inference",
+      "summary": "结合后续2、1、3的顺序，候选解释为接近终点阶段的局部循环；不自动重置或降低速度。",
+      "basis": "inferred",
+      "source_cue_ids": [
+        "cue_000397",
+        "cue_000399",
+        "cue_000403",
+        "cue_000409"
+      ],
+      "source_evidence": [
+        {
+          "cue_id": "cue_000397",
+          "quote": "再来一次"
+        },
+        {
+          "cue_id": "cue_000399",
+          "quote": "2"
+        },
+        {
+          "cue_id": "cue_000403",
+          "quote": "1"
+        },
+        {
+          "cue_id": "cue_000409",
+          "quote": "3"
+        }
+      ]
+    },
+    {
+      "cue_id": "cue_000541",
+      "kind": "phase_transition",
+      "summary": "进入第二轮活动，不凭轮次变化自行增加速度或幅度。",
+      "basis": "explicit",
+      "source_cue_ids": [
+        "cue_000541"
+      ],
+      "source_evidence": [
+        {
+          "cue_id": "cue_000541",
+          "quote": "开始第二次吧"
+        }
+      ]
+    },
+    {
+      "cue_id": "cue_000657",
+      "kind": "state_continuation",
+      "summary": "存在跟随快速声音的要求；精确同步和周期需要音频证据，当前预设不能冒充同步。",
+      "basis": "explicit",
+      "source_cue_ids": [
+        "cue_000657"
+      ],
+      "source_evidence": [
+        {
+          "cue_id": "cue_000657",
+          "quote": "配合着快速的套弄音"
+        }
+      ]
+    },
+    {
+      "cue_id": "cue_000683",
+      "kind": "scene_inference",
+      "summary": "催促可能要求相对加快；结合相邻对缓慢的否定理解，不凭催促语气指定绝对档位。",
+      "basis": "inferred",
+      "source_cue_ids": [
+        "cue_000683",
+        "cue_000685"
+      ],
+      "source_evidence": [
+        {
+          "cue_id": "cue_000683",
+          "quote": "太拖拉会赶不上倒数的哟"
+        },
+        {
+          "cue_id": "cue_000685",
+          "quote": "慢吞吞的"
+        }
+      ]
+    },
+    {
+      "cue_id": "cue_000779",
+      "kind": "phase_transition",
+      "summary": "当前活动结束，后续评价与未来话语不自动重新启动。",
+      "basis": "explicit",
+      "source_cue_ids": [
+        "cue_000779"
+      ],
+      "source_evidence": [
+        {
+          "cue_id": "cue_000779",
+          "quote": "好的，结束了"
+        }
+      ]
+    }
+  ]
+}

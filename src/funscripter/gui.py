@@ -10,6 +10,7 @@ from tkinter.scrolledtext import ScrolledText
 
 from .gui_backend import DesktopController, absolute, load_model, probe_model, save_model
 from .models import LLMConfig
+from .review_panel import ReviewPanel
 
 
 class DesktopApp:
@@ -41,6 +42,10 @@ class DesktopApp:
         self.build_source(source)
         self.build_model(model)
         self.build_workflow(workflow)
+        review = ttk.Frame(tabs, padding=10)
+        tabs.add(review, text="  4  模型输出与纠正  ")
+        self.review = ReviewPanel(review, self.controller.workspace, lambda: self.busy)
+        self.tabs, self.review_tab = tabs, review
         self.status = tk.StringVar(value="就绪 · 无需本地模型即可导入和分析音频")
         ttk.Label(outer, textvariable=self.status).pack(anchor="w", pady=(12, 3))
         self.progress = ttk.Progressbar(outer, mode="indeterminate")
@@ -206,7 +211,8 @@ class DesktopApp:
                             boundaries=self.path("boundaries", True), profile=self.path("fusion_profile"))
             elif command == "diagnostic":
                 args.update(draft=self.path("draft"), profile=self.path("diagnostic_profile"))
-            self.start(command, lambda: self.controller.stage(command, **args), target)
+            callback = (lambda path: self.events.put(("planning_started", None, {"output": path}, None))) if command == "plan" else None
+            self.start(command, lambda: self.controller.stage(command, on_output=callback, **args), target)
         self.guard(start)
 
     def start(self, label, work, target=None):
@@ -233,6 +239,11 @@ class DesktopApp:
         try:
             while True:
                 label, target, result, error = self.events.get_nowait()
+                if label == "planning_started":
+                    self.review.follow(result["output"])
+                    self.tabs.select(self.review_tab)
+                    self.paths["planning"].set(result["output"])
+                    continue
                 self.busy = False
                 self.progress.stop()
                 for button in self.buttons:
@@ -269,7 +280,7 @@ class DesktopApp:
             subprocess.Popen(["open" if sys.platform == "darwin" else "xdg-open", path])
 
     def close(self):
-        if self.busy:
+        if self.busy or self.review.running:
             messagebox.showinfo("任务运行中", "请等待当前任务结束后关闭。任务记录会保存在工作目录。", parent=self.root)
         else:
             self.root.destroy()

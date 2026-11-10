@@ -109,6 +109,10 @@ class FusionTests(unittest.TestCase):
         self.assertEqual(plan["state_transitions"][1]["output_state"]["pace_tier"], "medium")
         self.events[1].update(pace_tier="slow")
         plan, _, _, _ = self.build()
+        self.assertEqual(plan["event_dispositions"][1]["status"], "applied_to_draft")
+        self.assertIn("absolute_target_already_reached", plan["event_dispositions"][1]["reasons"])
+        self.events[1].update(intent="decrease_rate", pace_tier="fast")
+        plan, _, _, _ = self.build()
         self.assertEqual(plan["event_dispositions"][1]["status"], "conflict")
 
     def test_duplicate_event_is_not_applied_twice(self):

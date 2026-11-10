@@ -164,7 +164,7 @@ def fuse_project(directory, planning, output, profile_path, analysis=None, bound
             "boundary_manifest_sha256": sha256(boundaries / "boundary_manifest.json") if boundaries else None,
             "fusion_profile_sha256": sha256(profile_path),
             "implementation_hashes": {name: sha256(Path(__file__).with_name(name)) for name in
-                ["fusion.py", "motion.py", "models.py", "preview.py", "fuse_project.py", "planning_inputs.py", "semantic_contracts.py"]},
+                ["fusion.py", "controls.py", "motion.py", "models.py", "preview.py", "fuse_project.py", "planning_inputs.py", "semantic_contracts.py"]},
             "artifact_hashes": {name: sha256(stage / name) for name in artifacts}}
         atomic_json(stage / "export_manifest.json", manifest)
         os.replace(stage, output)

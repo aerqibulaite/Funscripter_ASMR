@@ -4,6 +4,7 @@ from .models import QualitativeState, GenerationConfig, Segment
 from .motion import generate
 from .planner import digest
 from .semantic_contracts import CORE_FIELDS, event_identity
+from .controls import prepare_controls, update_controls, curve_preset, generate_controlled
 
 PACE = ["slow", "medium", "fast"]
 
@@ -24,7 +25,7 @@ def transition(state, event, unknown_policy):
         return (unknown_state() if unknown_policy == "hold_position" else before), reasons
     if intent == "pause" and pace not in ("stop", "unknown"):
         return before, ["pause_absolute_pace_conflict"]
-    if intent in ("resume", "increase_rate", "decrease_rate") and pace == "stop":
+    if intent in ("start", "continue", "resume", "increase_rate", "decrease_rate") and pace == "stop":
         return before, ["intent_stop_conflict"]
     if intent in ("increase_rate", "decrease_rate"):
         direction = 1 if intent == "increase_rate" else -1
@@ -36,8 +37,10 @@ def transition(state, event, unknown_policy):
             current = PACE.index(before["pace_tier"])
             if pace in PACE:
                 delta = PACE.index(pace) - current
-                if delta * direction <= 0:
+                if delta * direction < 0:
                     return before, ["relative_absolute_direction_conflict"]
+                if delta == 0:
+                    reasons.append("absolute_target_already_reached")
                 # Explicit absolute advice sets a target; do not also apply a step.
             else:
                 target = max(0, min(len(PACE)-1, current + direction))
@@ -48,14 +51,38 @@ def transition(state, event, unknown_policy):
         after["pace_tier"] = pace
     for key in ["amplitude_tier", "motion_style"]:
         if event[key] != "unknown":
+            if key == "motion_style" and event[key] == "hold" and (intent == "pause" or pace == "stop"):
+                # Pausing is orthogonal to the active style needed for a later resume.
+                continue
             after[key] = event[key]
     if intent == "pause" or pace == "stop":
         after["paused"] = True
-    elif intent == "resume":
+    elif intent in ("start", "resume", "continue"):
         if "unknown" in (after["pace_tier"], after["amplitude_tier"], after["motion_style"]) or after["motion_style"] == "hold":
             return before, ["resume_target_unknown"]
         after["paused"] = False
     return after, reasons
+
+
+def combine_compatible_events(incoming):
+    """Combine one action with complementary maintain fields, without inventing order."""
+    events = [event for event, _ in incoming]
+    if any(event is None for event in events) or len({event["cue_id"] for event in events}) != 1:
+        return None
+    principal = [index for index, event in enumerate(events) if event["intent"] not in ("maintain", "unknown")]
+    # Multiple relative changes, pause/resume, etc. need ordering we do not have.
+    if len(principal) > 1:
+        return None
+    index = principal[0] if principal else 0
+    merged = deepcopy(events[index])
+    for key in ("pace_tier", "amplitude_tier", "motion_style"):
+        values = {event[key] for event in events if event[key] != "unknown"}
+        if len(values) > 1:
+            return None
+        if values:
+            merged[key] = values.pop()
+    merged["needs_review"] = any(event["needs_review"] for event in events)
+    return merged, incoming[index][1]
 
 
 def resolve_boundaries(timeline, candidate_doc, profile, duration_ms):
@@ -101,6 +128,9 @@ def build_plan(project, timeline, duration_ms, semantic, outline, audio, candida
     version2 = semantic.get("schema_version") == "1.4"
     assessments = {row["cue_id"]: row for row in semantic.get("cue_assessments", [])}
     cues = {cue.cue_id: cue for cue in timeline.cues}
+    if set(profile.rhythm_anchors_ms) - set(cues):
+        raise ValueError("rhythm anchors reference an unknown cue")
+    control_schedule, control_dispositions = prepare_controls(semantic, cues, profile, duration_ms)
     candidate_doc, boundaries = resolve_boundaries(timeline, candidate_doc, profile, duration_ms)
     end_rows = {row["cue_id"]: row for row in candidate_doc["cues"]}
     end_anchors = {event["cue_id"] for event in semantic["events"] if event["anchor"] == "after_utterance"}
@@ -215,7 +245,7 @@ def build_plan(project, timeline, duration_ms, semantic, outline, audio, candida
         if key in profile_presets and profile_presets[key] != preset:
             raise ValueError("fusion/manual preset IDs conflict")
         profile_presets[key] = preset
-    edges = {0, duration_ms, *schedule}
+    edges = {0, duration_ms, *schedule, *control_schedule}
     for phase in phases:
         edges.update([phase["start_ms"], phase["end_ms"]])
     for segment in manual:
@@ -226,6 +256,7 @@ def build_plan(project, timeline, duration_ms, semantic, outline, audio, candida
     state = profile.initial_state.model_dump()
     state_sources, active_reasons = [], ["configured_initial_state"]
     state_history, segments = [], []
+    active_control, explicit_parameters = {}, False
     resets = {phase["start_ms"]: phase["phase_id"] for phase in phases}
     for start, end in zip(edges, edges[1:]):
         if start in resets:
@@ -235,6 +266,13 @@ def build_plan(project, timeline, duration_ms, semantic, outline, audio, candida
             else:
                 active_reasons = list(active_reasons) + ["summary_boundary_state_preserved"]
         incoming = schedule.get(start, [])
+        controls_here = control_schedule.get(start, [])
+        old_sequence = (active_control.get("progress") or {}).get("sequence_cue_id")
+        active_control = update_controls(active_control, controls_here, profile, duration_ms)
+        new_progress = active_control.get("progress") or {}
+        if new_progress.get("sequence_cue_id") != old_sequence or any(
+                row["directive"].get("status") == "reset" for row in controls_here):
+            explicit_parameters = False
         context_reasons = []
         actionable = [(event, record) for event, record in incoming if event is not None and
                       (event["intent"] != "unknown" or any(event[key] != "unknown" for key in ["pace_tier", "amplitude_tier", "motion_style"]))]
@@ -251,6 +289,10 @@ def build_plan(project, timeline, duration_ms, semantic, outline, audio, candida
         if incoming:
             before = deepcopy(state)
             previous_sources = list(state_sources)
+            original_incoming = incoming
+            combined = combine_compatible_events(incoming) if len(incoming) > 1 else None
+            if combined is not None:
+                incoming = [combined]
             if len(incoming) > 1:
                 active_reasons = ["simultaneous_events_need_review"]
                 if profile.unknown_policy == "hold_position":
@@ -266,7 +308,15 @@ def build_plan(project, timeline, duration_ms, semantic, outline, audio, candida
                     if profile.unknown_policy == "hold_position":
                         state = unknown_state()
                 else:
-                    candidate, active_reasons = transition(state, event, profile.unknown_policy)
+                    transition_input = deepcopy(state)
+                    default_fields = []
+                    if profile.action_defaults is not None and event["intent"] in ("start", "resume", "continue"):
+                        defaults = profile.action_defaults.model_dump()
+                        for key in ("pace_tier", "amplitude_tier", "motion_style"):
+                            if transition_input[key] == "unknown" and event[key] == "unknown" and defaults[key] != "unknown":
+                                transition_input[key] = defaults[key]
+                                default_fields.append(key)
+                    candidate, active_reasons = transition(transition_input, event, profile.unknown_policy)
                     fatal = any(reason in active_reasons for reason in ["pause_absolute_pace_conflict",
                         "intent_stop_conflict", "relative_change_unknown_initial_state",
                         "relative_absolute_direction_conflict", "resume_target_unknown"])
@@ -277,12 +327,30 @@ def build_plan(project, timeline, duration_ms, semantic, outline, audio, candida
                     else:
                         state = candidate
                         record["status"] = "applied_to_draft"
+                        if event["intent"] in ("increase_rate", "decrease_rate") or any(
+                                event[key] != "unknown" for key in ("pace_tier", "amplitude_tier")):
+                            explicit_parameters = True
+                        if event["intent"] in ("start", "resume", "continue") and not any(
+                                row["directive"]["kind"] != "countdown" for row in controls_here):
+                            active_control.pop("blocked_task", None)
+                            if event["intent"] == "start":
+                                active_control.pop("task", None)
+                        if default_fields:
+                            record["configured_default_fields"] = default_fields
+                            active_reasons.append("configured_action_defaults:" + ",".join(default_fields))
                     record["reasons"].extend(active_reasons)
                     if record.get("anchor_source") == "inferred_draft_boundary":
                         active_reasons = active_reasons + ["inferred_utterance_boundary"]
                     if event["needs_review"]:
                         active_reasons = active_reasons + ["model_requested_review"]
-                state_sources = [record["event_id"]] if record["event_id"] else []
+                if combined is not None:
+                    active_reasons.append("compatible_same_cue_events_combined")
+                    record["reasons"].append("compatible_same_cue_events_combined")
+                    for _, other in original_incoming:
+                        if other is not record:
+                            other["status"] = record["status"]
+                            other["reasons"].extend(record["reasons"])
+                state_sources = [row["event_id"] for _, row in original_incoming if row["event_id"]]
             if state == unknown_state():
                 previous_sources = []
             state_sources = list(dict.fromkeys(previous_sources + state_sources))
@@ -295,7 +363,10 @@ def build_plan(project, timeline, duration_ms, semantic, outline, audio, candida
         override = next((segment for segment in manual if segment.start_ms <= start and end <= segment.end_ms), None)
         if override:
             preset_id, mode = override.preset_id, "preset"
+            active_control.pop("task", None)
             reasons.append("manual_segment_priority")
+        elif active_control.get("blocked_task"):
+            reasons.append("unresolved_control_hold_position")
         elif state["paused"] or state["motion_style"] == "hold":
             reasons.append("explicit_pause_or_hold")
         elif "unknown" in (state["pace_tier"], state["amplitude_tier"], state["motion_style"]):
@@ -307,6 +378,13 @@ def build_plan(project, timeline, duration_ms, semantic, outline, audio, candida
                 mode = "preset"
             else:
                 reasons.append("unmapped_qualitative_state_hold_position")
+        if not override and mode == "preset" and not explicit_parameters:
+            selected = curve_preset(active_control, profile)
+            if selected:
+                preset_id = selected
+                reasons.append("configured_progress_curve")
+        if active_control.get("progress"):
+            reasons.append("script_progress_not_physiological_feedback")
         audio_ids, periods = [], []
         for window in (audio or {}).get("periodicity", []):
             if window["start_ms"] < end and window["end_ms"] > start:
@@ -344,6 +422,7 @@ def build_plan(project, timeline, duration_ms, semantic, outline, audio, candida
             "audio_evidence_ids": sorted(set(audio_ids)), "needs_review": True,
             "review_reasons": sorted(set(reasons)), "manual_source_id": override.segment_id if override else None,
             "boundary_status": "manual_segment" if override else "generated_draft"})
+        segments[-1]["control"] = deepcopy(active_control) or None
     # Coalesce identical active presets before calling the generator: evidence-only splits
     # must not reset phase. Static spans remain explicit holds between generated segments.
     generated_segments = []
@@ -359,7 +438,12 @@ def build_plan(project, timeline, duration_ms, semantic, outline, audio, candida
     config.generation = GenerationConfig(initial_position=project.config.generation.initial_position,
         presets=profile_presets, segments=generated_segments)
     script, validation = generate(config, duration_ms, allow_constraint_errors=True)
+    control_execution = []
+    if any((segment.get("control") or {}).get("task") for segment in segments):
+        script, validation, control_execution = generate_controlled(config, segments, duration_ms)
     validation.update(reviewed_export=False, human_review_required=True)
     return {"schema_version": "1.3", "profile": profile.model_dump(mode="json"), "phases": phases,
             "segments": segments, "event_dispositions": dispositions, "state_transitions": state_history,
+            "context_notes": deepcopy(semantic.get("context_notes", [])),
+            "control_dispositions": control_dispositions, "control_execution": control_execution,
             "status": "needs_review"}, candidate_doc, script, validation

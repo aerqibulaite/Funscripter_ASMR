@@ -1,0 +1,21 @@
+# Paired with launch_qwen_server.cmd (one slot, 32768 context).
+backend: llama_cpp
+base_url: http://127.0.0.1:8080
+model_id: Huihui-Qwen3.8-27B-abliterated-UD-DW-IQ3_S
+model_revision: local-gguf
+quantization: IQ3_S
+api_key_env: null
+timeout_seconds: 600.0
+max_retries: 1
+context_budget_tokens: 32768
+token_count_method: server
+outline_max_phases: 8
+outline_summary_chars: 160
+max_output_tokens: 4096
+safety_tokens: 1024
+max_chunk_cues: 8
+context_cues: 2
+semantic_knowledge_file: semantic-knowledge.md
+thinking: false
+temperature: 0.2
+top_p: 0.9

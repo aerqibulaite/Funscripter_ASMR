@@ -1,5 +1,9 @@
 # Funscripter ASMR
 
+情境笔记、无显式规则的理解、关键词知识文件和暂停后恢复的新版用法，见 [情境规划与可编辑知识](docs/context-planning.md)。可直接修改 `config/semantic-knowledge.md`。
+
+通用倒计时进度、定次重复、节奏锚点及执行结果说明，见 [通用控制接口](docs/generic-controls.md)。
+
 本地字幕与音频融合工具，目前提供 M1–M5 的单轴 CLI 工作流，以及用于文件选择、本地模型配置和分步运行的桌面测试界面：导入音频与 LRC/SRT、基础音频分析、两遍语义规划、融合草稿、诊断视频与外部修订保护。真实模型、真实素材与 OFS/MultiFunPlayer 的端到端验收仍待完成。
 
 双击 `launch_gui.cmd` 或运行 `python tools/gui.py` 打开界面。支持 Ollama / llama.cpp 配置、连接与 JSON 推理测试，操作步骤见 [桌面界面说明](docs/gui.md)。

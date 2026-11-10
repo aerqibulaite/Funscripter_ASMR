@@ -1,6 +1,6 @@
-# Executable paths are explicit. Override them for tools outside PATH.
-ffmpeg: ffmpeg
-ffprobe: ffprobe
+# Paths are relative to this YAML file; binaries are installed in workspace/tools.
+ffmpeg: ../workspace/tools/ffmpeg-binaries/ffmpeg.exe
+ffprobe: ../workspace/tools/ffmpeg-binaries/ffprobe.exe
 font_path: C:/Windows/Fonts/msyh.ttc
 width: 1280
 height: 720

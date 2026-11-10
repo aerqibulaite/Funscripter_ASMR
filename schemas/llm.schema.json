@@ -86,6 +86,41 @@
       "title": "Context Cues",
       "type": "integer"
     },
+    "semantic_knowledge_file": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Semantic Knowledge File"
+    },
+    "token_count_method": {
+      "default": "conservative",
+      "enum": [
+        "conservative",
+        "server"
+      ],
+      "title": "Token Count Method",
+      "type": "string"
+    },
+    "outline_max_phases": {
+      "default": 8,
+      "maximum": 64,
+      "minimum": 1,
+      "title": "Outline Max Phases",
+      "type": "integer"
+    },
+    "outline_summary_chars": {
+      "default": 160,
+      "maximum": 1000,
+      "minimum": 40,
+      "title": "Outline Summary Chars",
+      "type": "integer"
+    },
     "thinking": {
       "anyOf": [
         {

@@ -34,6 +34,9 @@ def load_config(path):
     raw = yaml.safe_load(path.read_text(encoding="utf-8-sig"))
     # JSON validation accepts YAML arrays for tuple fields, still rejects coerced scalars.
     config = Config.model_validate_json(json.dumps(raw, allow_nan=False))
+    if config.llm:
+        from .model_profiles import resolve_knowledge
+        config.llm = resolve_knowledge(config.llm, path.parent)
     for value in [config.audio, config.subtitles.path]:
         if not (path.parent / value).is_file():
             raise ValueError(f"input not found: {value}")
@@ -181,8 +184,8 @@ def plan_project(directory, output, profile_path=None, resume=False, transport=N
     project, timeline, media, _ = reopen_project(directory)
     config = project.config.llm
     if profile_path is not None:
-        raw = yaml.safe_load(Path(profile_path).read_text(encoding="utf-8-sig"))
-        config = LLMConfig.model_validate_json(json.dumps(raw, allow_nan=False))
+        from .model_profiles import load_model_profile
+        config = load_model_profile(profile_path)
     if config is None:
         raise ValueError("configure llm or provide --profile; no default remote service")
     if not timeline.cues:
@@ -197,7 +200,8 @@ def plan_project(directory, output, profile_path=None, resume=False, transport=N
                            for row in input_view["cues"] if row["status"] == "excluded"]
     signature = digest({"project_id": project.project_id, "revision_id": project.revision_id,
         "subtitles": project.artifact_hashes["subtitles"], "config": config.model_dump(mode="json"),
-        "implementation": planner.implementation_hash, "prompt_version": PROMPT_VERSION})
+        "implementation": planner.implementation_hash, "prompt_version": PROMPT_VERSION,
+        "knowledge_sha256": planner.knowledge_hash})
     run_path = output / "planning_run.json"
     if output.exists():
         if not resume:
@@ -213,11 +217,14 @@ def plan_project(directory, output, profile_path=None, resume=False, transport=N
         "source_revision_id": project.revision_id, "subtitle_sha256": project.artifact_hashes["subtitles"],
         "config": config.model_dump(mode="json"), "prompt_version": PROMPT_VERSION,
         "implementation_sha256": planner.implementation_hash,
-        "token_budget_method": "conservative_utf8_bytes_plus_schema_and_safety",
+        "knowledge_sha256": planner.knowledge_hash,
+        "token_budget_method": planner.budget_method,
         "status": "running", "human_review_required": True,
         "semantic_schema_version": "1.4", "eligible_cue_count": len(eligible),
         "excluded_cue_count": input_view["excluded_count"]}
     atomic_json(output / "planning_inputs.json", input_view)
+    atomic_json(output / "semantic_knowledge.json", {"source": config.semantic_knowledge_file,
+                "sha256": planner.knowledge_hash, "content": planner.knowledge})
     atomic_json(run_path, run)
     events, failures = [], []
     outline = None
@@ -236,6 +243,7 @@ def plan_project(directory, output, profile_path=None, resume=False, transport=N
             checkpoint = json.loads((output / "semantic_events.json").read_text(encoding="utf-8"))
             events = checkpoint["events"]
             planner.assessments = checkpoint["cue_assessments"]
+            planner.context_notes = checkpoint.get("context_notes", [])
         covered = {row["cue_id"] for row in planner.assessments if row["status"] != "failed"}
         failures = [{"cue_id": cue.cue_id, "reason": "planning_failed"} for cue in eligible if cue.cue_id not in covered]
     except KeyboardInterrupt:
@@ -245,6 +253,7 @@ def plan_project(directory, output, profile_path=None, resume=False, transport=N
             checkpoint = json.loads((output / "semantic_events.json").read_text(encoding="utf-8"))
             events, failures = checkpoint["events"], checkpoint["failures"]
             planner.assessments = checkpoint["cue_assessments"]
+            planner.context_notes = checkpoint.get("context_notes", [])
         covered = {row["cue_id"] for row in planner.assessments} | {row["cue_id"] for row in failures}
         failures.extend({"cue_id": cue.cue_id, "reason": "cancelled"} for cue in eligible if cue.cue_id not in covered)
     assessments = {row["cue_id"]: row for row in planner.assessments}
@@ -255,6 +264,6 @@ def plan_project(directory, output, profile_path=None, resume=False, transport=N
     atomic_json(output / "request_log.json", planner.trace)
     run["event_count"], run["failure_count"] = len(events), len(failures)
     run["artifact_hashes"] = {name: sha256(output / name) for name in
-        ["outline.json", "semantic_events.json", "request_log.json", "planning_inputs.json"] if (output / name).exists()}
+        ["outline.json", "semantic_events.json", "request_log.json", "planning_inputs.json", "semantic_knowledge.json"] if (output / name).exists()}
     atomic_json(run_path, run)
     return run

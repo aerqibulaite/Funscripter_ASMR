@@ -18,8 +18,8 @@ def absolute(value):
 
 
 def load_model(path):
-    raw = yaml.safe_load(Path(path).read_text(encoding="utf-8-sig"))
-    return LLMConfig.model_validate_json(json.dumps(raw))
+    from .model_profiles import load_model_profile
+    return load_model_profile(path)
 
 
 def save_model(path, values):
@@ -63,7 +63,7 @@ class DesktopController:
         config_path.write_text(yaml.safe_dump(config.model_dump(mode="json"), allow_unicode=True), encoding="utf-8")
         return self.stage("create", config=str(config_path))
 
-    def stage(self, command, **values):
+    def stage(self, command, on_output=None, **values):
         if command not in {"create", "analyze", "plan", "utterance-candidates", "fuse", "diagnostic"}:
             raise ValueError("unsupported desktop stage")
         arguments = {key: None for key in FIELDS[command]}
@@ -74,6 +74,8 @@ class DesktopController:
         arguments.update(values)
         output = self.fresh(command)
         arguments["output"] = str(output)
+        if on_output:
+            on_output(str(output))
         result = run_task(command, arguments, self.executor)
         return {**result, "output": str(output)}
 

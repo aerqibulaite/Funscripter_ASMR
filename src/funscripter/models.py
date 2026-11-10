@@ -103,6 +103,10 @@ class LLMConfig(Model):
     safety_tokens: int = Field(default=1024, ge=128)
     max_chunk_cues: int = Field(default=32, ge=1, le=256)
     context_cues: int = Field(default=1, ge=0, le=8)
+    semantic_knowledge_file: str | None = None
+    token_count_method: Literal["conservative", "server"] = "conservative"
+    outline_max_phases: int = Field(default=8, ge=1, le=64)
+    outline_summary_chars: int = Field(default=160, ge=40, le=1000)
     thinking: bool | Literal["backend_default"] = "backend_default"
     temperature: float | None = Field(default=None, ge=0, le=2)
     top_p: float | None = Field(default=None, gt=0, le=1)
@@ -157,9 +161,50 @@ class SourceEvidence(Model):
 
 
 class SemanticEventV2(SemanticEvent):
+    intent: Literal["start", "continue", "maintain", "pause", "resume", "increase_rate", "decrease_rate", "unknown"]
     source_cue_ids: list[str] = Field(min_length=1)
     source_evidence: list[SourceEvidence] = Field(min_length=1)
     statement_kind: Literal["instruction", "description", "question", "conditional", "quotation", "uncertain"]
+
+
+class CountdownProgress(Model):
+    start_value: int = Field(ge=0, le=10000)
+    end_value: int = Field(ge=0, le=10000)
+    current_value: int = Field(ge=0, le=10000)
+
+    @model_validator(mode="after")
+    def check_values(self):
+        if not self.end_value <= self.current_value <= self.start_value or self.start_value == self.end_value:
+            raise ValueError("countdown needs start > end and current inside its range")
+        return self
+
+
+class ControlDirective(Model):
+    kind: Literal["countdown", "rhythm_follow", "repetition"]
+    sequence_cue_id: str
+    status: Literal["update", "reset", "end"] = "update"
+    progress: CountdownProgress | None = None
+    count: int | None = Field(default=None, ge=1, le=10000)
+    unit: Literal["single_travel", "round_trip", "unknown"] = "unknown"
+
+    @model_validator(mode="after")
+    def check_control(self):
+        if self.kind == "countdown":
+            if self.progress is None or self.count is not None or self.unit != "unknown":
+                raise ValueError("countdown requires progress only")
+        elif self.progress is not None or (self.kind == "repetition") != (self.count is not None):
+            raise ValueError("only repetition has count; non-countdown cannot have progress")
+        return self
+
+
+class ContextNote(Model):
+    cue_id: str
+    kind: Literal["rule_definition", "rule_trigger", "phase_transition", "state_continuation", "scene_inference"]
+    summary: str = Field(min_length=1, max_length=600)
+    basis: Literal["explicit", "inferred"]
+    source_cue_ids: list[str] = Field(min_length=1)
+    source_evidence: list[SourceEvidence] = Field(min_length=1)
+    control: ControlDirective | None = None
 
 
 class CueAssessment(Model):
@@ -172,6 +217,7 @@ class SemanticBatchV2(Model):
     schema_version: Literal["1.4"]
     cue_assessments: list[CueAssessment]
     events: list[SemanticEventV2]
+    context_notes: list[ContextNote] = Field(default_factory=list)
 
 
 class Config(Model):
@@ -247,12 +293,21 @@ class QualitativeState(Model):
     paused: bool = False
 
 
+class ProgressCurvePoint(Model):
+    at: float = Field(ge=0, le=1)
+    preset_id: str
+
+
 class FusionProfile(Model):
     schema_version: Literal["1.3"] = "1.3"
     preset_version: str = Field(min_length=1)
     presets: dict[str, Preset]
     tier_map: dict[str, str]
     initial_state: QualitativeState = Field(default_factory=QualitativeState)
+    action_defaults: QualitativeState | None = None
+    progress_curve: list[ProgressCurvePoint] = Field(default_factory=list)
+    allow_inferred_controls: bool = False
+    rhythm_anchors_ms: dict[str, list[int]] = Field(default_factory=dict)
     unknown_policy: Literal["hold_position", "maintain_state"]
     manual_boundaries_ms: dict[str, int] = Field(default_factory=dict)
     use_empty_timestamp_hints: bool = False
@@ -262,6 +317,14 @@ class FusionProfile(Model):
 
     @model_validator(mode="after")
     def check_fusion(self):
+        if self.progress_curve and (self.progress_curve[0].at != 0 or any(
+                a.at >= b.at for a, b in zip(self.progress_curve, self.progress_curve[1:]))):
+            raise ValueError("progress_curve must start at 0 and strictly increase")
+        if any(point.preset_id not in self.presets for point in self.progress_curve):
+            raise ValueError("progress_curve references unknown preset")
+        for anchors in self.rhythm_anchors_ms.values():
+            if not anchors or anchors[0] < 0 or any(a >= b for a, b in zip(anchors, anchors[1:])):
+                raise ValueError("rhythm anchors must be nonempty, nonnegative and strictly increasing")
         for key, preset_id in self.tier_map.items():
             fields = key.split("/")
             if len(fields) != 3 or fields[0] not in ("slow", "medium", "fast") or fields[1] not in ("small", "medium", "large") or fields[2] not in ("rhythmic", "smooth", "irregular"):
@@ -293,6 +356,7 @@ class FusedSegment(Model):
     review_reasons: list[str]
     manual_source_id: str | None
     boundary_status: Literal["manual_segment", "generated_draft"]
+    control: dict | None = None
 
     @model_validator(mode="after")
     def check_span(self):
@@ -308,6 +372,9 @@ class SegmentPlan(Model):
     segments: list[FusedSegment]
     event_dispositions: list[dict]
     state_transitions: list[dict]
+    context_notes: list[ContextNote] = Field(default_factory=list)
+    control_dispositions: list[dict] = Field(default_factory=list)
+    control_execution: list[dict] = Field(default_factory=list)
     status: Literal["needs_review"]
 
 

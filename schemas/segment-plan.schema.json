@@ -1,5 +1,175 @@
 {
   "$defs": {
+    "ContextNote": {
+      "additionalProperties": false,
+      "properties": {
+        "cue_id": {
+          "title": "Cue Id",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "rule_definition",
+            "rule_trigger",
+            "phase_transition",
+            "state_continuation",
+            "scene_inference"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "summary": {
+          "maxLength": 600,
+          "minLength": 1,
+          "title": "Summary",
+          "type": "string"
+        },
+        "basis": {
+          "enum": [
+            "explicit",
+            "inferred"
+          ],
+          "title": "Basis",
+          "type": "string"
+        },
+        "source_cue_ids": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Source Cue Ids",
+          "type": "array"
+        },
+        "source_evidence": {
+          "items": {
+            "$ref": "#/$defs/SourceEvidence"
+          },
+          "minItems": 1,
+          "title": "Source Evidence",
+          "type": "array"
+        },
+        "control": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ControlDirective"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "cue_id",
+        "kind",
+        "summary",
+        "basis",
+        "source_cue_ids",
+        "source_evidence"
+      ],
+      "title": "ContextNote",
+      "type": "object"
+    },
+    "ControlDirective": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "enum": [
+            "countdown",
+            "rhythm_follow",
+            "repetition"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "sequence_cue_id": {
+          "title": "Sequence Cue Id",
+          "type": "string"
+        },
+        "status": {
+          "default": "update",
+          "enum": [
+            "update",
+            "reset",
+            "end"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "progress": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CountdownProgress"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "count": {
+          "anyOf": [
+            {
+              "maximum": 10000,
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Count"
+        },
+        "unit": {
+          "default": "unknown",
+          "enum": [
+            "single_travel",
+            "round_trip",
+            "unknown"
+          ],
+          "title": "Unit",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "sequence_cue_id"
+      ],
+      "title": "ControlDirective",
+      "type": "object"
+    },
+    "CountdownProgress": {
+      "additionalProperties": false,
+      "properties": {
+        "start_value": {
+          "maximum": 10000,
+          "minimum": 0,
+          "title": "Start Value",
+          "type": "integer"
+        },
+        "end_value": {
+          "maximum": 10000,
+          "minimum": 0,
+          "title": "End Value",
+          "type": "integer"
+        },
+        "current_value": {
+          "maximum": 10000,
+          "minimum": 0,
+          "title": "Current Value",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "start_value",
+        "end_value",
+        "current_value"
+      ],
+      "title": "CountdownProgress",
+      "type": "object"
+    },
     "FusedSegment": {
       "additionalProperties": false,
       "properties": {
@@ -98,6 +268,19 @@
           ],
           "title": "Boundary Status",
           "type": "string"
+        },
+        "control": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Control"
         }
       },
       "required": [
@@ -149,6 +332,39 @@
         },
         "initial_state": {
           "$ref": "#/$defs/QualitativeState"
+        },
+        "action_defaults": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/QualitativeState"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "progress_curve": {
+          "items": {
+            "$ref": "#/$defs/ProgressCurvePoint"
+          },
+          "title": "Progress Curve",
+          "type": "array"
+        },
+        "allow_inferred_controls": {
+          "default": false,
+          "title": "Allow Inferred Controls",
+          "type": "boolean"
+        },
+        "rhythm_anchors_ms": {
+          "additionalProperties": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array"
+          },
+          "title": "Rhythm Anchors Ms",
+          "type": "object"
         },
         "unknown_policy": {
           "enum": [
@@ -235,6 +451,27 @@
       "title": "Preset",
       "type": "object"
     },
+    "ProgressCurvePoint": {
+      "additionalProperties": false,
+      "properties": {
+        "at": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "At",
+          "type": "number"
+        },
+        "preset_id": {
+          "title": "Preset Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "at",
+        "preset_id"
+      ],
+      "title": "ProgressCurvePoint",
+      "type": "object"
+    },
     "QualitativeState": {
       "additionalProperties": false,
       "properties": {
@@ -280,6 +517,26 @@
       },
       "title": "QualitativeState",
       "type": "object"
+    },
+    "SourceEvidence": {
+      "additionalProperties": false,
+      "properties": {
+        "cue_id": {
+          "title": "Cue Id",
+          "type": "string"
+        },
+        "quote": {
+          "minLength": 1,
+          "title": "Quote",
+          "type": "string"
+        }
+      },
+      "required": [
+        "cue_id",
+        "quote"
+      ],
+      "title": "SourceEvidence",
+      "type": "object"
     }
   },
   "additionalProperties": false,
@@ -321,6 +578,29 @@
         "type": "object"
       },
       "title": "State Transitions",
+      "type": "array"
+    },
+    "context_notes": {
+      "items": {
+        "$ref": "#/$defs/ContextNote"
+      },
+      "title": "Context Notes",
+      "type": "array"
+    },
+    "control_dispositions": {
+      "items": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "title": "Control Dispositions",
+      "type": "array"
+    },
+    "control_execution": {
+      "items": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "title": "Control Execution",
       "type": "array"
     },
     "status": {
