@@ -1,0 +1,8 @@
+# Experimental, uncalibrated feature thresholds. Candidates require review.
+bands: [mid]
+energy_floor_dbfs: -70.0
+relative_low_ratio: 0.2
+min_active_ms: 120
+min_quiet_ms: 250
+min_delay_ms: 120
+merge_window_ms: 80

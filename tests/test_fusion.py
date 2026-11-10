@@ -245,6 +245,45 @@ class FusionTests(unittest.TestCase):
         self.assertEqual(result["motion_style"], "hold")
         self.assertIn("resume_target_unknown", reasons)
 
+    def test_audio_end_candidates_require_manual_confirmation_and_saved_human_wins(self):
+        self.events[1].update(intent="pause", anchor="after_utterance", needs_review=True)
+        row = self.candidates["cues"][1]
+        row["utterance_end_candidates"] = [{"time_ms": 1500, "method": "band_energy_drop",
+            "evidence_id": "test-energy", "score": 1.0, "status": "unaccepted"}]
+        plan, _, _, _ = self.build()
+        self.assertNotIn("effective_time_ms", plan["event_dispositions"][1])
+        row["accepted_candidate"] = {"time_ms": 1600, "method": "manual_confirmation",
+            "evidence_id": "confirmed-by-user", "status": "human_boundary"}
+        plan, candidates, _, _ = self.build()
+        self.assertEqual(plan["event_dispositions"][1]["effective_time_ms"], 1600)
+        self.assertEqual(candidates["cues"][1]["accepted_candidate"]["evidence_id"], "confirmed-by-user")
+        with self.assertRaisesRegex(ValueError, "conflicts with saved human"):
+            self.build(make_profile(manual_boundaries_ms={self.cues[1].cue_id: 1700}))
+
+    def test_boundary_bundle_binding_integrity_and_exact_analysis_revision(self):
+        from funscripter.boundaries import create_boundary_candidates
+        self.events[1].update(intent="pause", anchor="after_utterance", needs_review=True)
+        planning, profile = self.publish_inputs()
+        analysis, boundaries = self.root / "analysis", self.root / "boundaries"
+        analyze_project(self.project_dir, analysis)
+        create_boundary_candidates(self.project_dir, analysis, boundaries)
+        output = self.root / "fusion-with-boundaries"
+        result = fuse_project(self.project_dir, planning, output, profile, analysis, boundaries)
+        self.assertEqual(result["boundary_manifest_sha256"], sha256(boundaries / "boundary_manifest.json"))
+        candidates = json.loads((output / "utterance_candidates.json").read_text(encoding="utf-8"))
+        self.assertEqual(candidates["components"]["band_energy"], "available")
+        self.assertTrue(all(row["accepted_candidate"] is None for row in candidates["cues"]))
+        plan = json.loads((output / "segment_plan.json").read_text(encoding="utf-8"))
+        self.assertTrue(any("utterance_end:no_sustained_end_evidence" in row["review_reasons"] for row in plan["segments"]))
+        self.assertIn("utterance_end:no_sustained_end_evidence", (output / "review.csv").read_text(encoding="utf-8-sig"))
+        other_analysis = self.root / "other-analysis"
+        analyze_project(self.project_dir, other_analysis, reuse_analysis=analysis)
+        with self.assertRaisesRegex(ValueError, "different analysis revision"):
+            fuse_project(self.project_dir, planning, self.root / "mismatched", profile, other_analysis, boundaries)
+        (boundaries / "utterance_candidates.json").write_text("{}", encoding="utf-8")
+        with self.assertRaisesRegex(ValueError, "source artifact changed"):
+            fuse_project(self.project_dir, planning, self.root / "tampered", profile, analysis, boundaries)
+
     def test_chapter_reset_and_next_section_scope(self):
         phases = self.outline.model_dump(mode="json")["phases"]
         phases[0]["end_cue_id_inclusive"] = self.cues[3].cue_id

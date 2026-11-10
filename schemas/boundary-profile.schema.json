@@ -1,0 +1,53 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "bands": {
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1,
+      "title": "Bands",
+      "type": "array"
+    },
+    "energy_floor_dbfs": {
+      "default": -70.0,
+      "maximum": -10,
+      "minimum": -120,
+      "title": "Energy Floor Dbfs",
+      "type": "number"
+    },
+    "relative_low_ratio": {
+      "default": 0.2,
+      "exclusiveMaximum": 1,
+      "exclusiveMinimum": 0,
+      "title": "Relative Low Ratio",
+      "type": "number"
+    },
+    "min_active_ms": {
+      "default": 120,
+      "minimum": 1,
+      "title": "Min Active Ms",
+      "type": "integer"
+    },
+    "min_quiet_ms": {
+      "default": 250,
+      "minimum": 1,
+      "title": "Min Quiet Ms",
+      "type": "integer"
+    },
+    "min_delay_ms": {
+      "default": 120,
+      "minimum": 0,
+      "title": "Min Delay Ms",
+      "type": "integer"
+    },
+    "merge_window_ms": {
+      "default": 80,
+      "minimum": 0,
+      "title": "Merge Window Ms",
+      "type": "integer"
+    }
+  },
+  "title": "BoundaryProfile",
+  "type": "object"
+}

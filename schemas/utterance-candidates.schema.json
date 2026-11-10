@@ -1,0 +1,212 @@
+{
+  "$defs": {
+    "CueCandidates": {
+      "additionalProperties": false,
+      "properties": {
+        "cue_id": {
+          "title": "Cue Id",
+          "type": "string"
+        },
+        "utterance_end_candidates": {
+          "items": {
+            "$ref": "#/$defs/EndCandidate"
+          },
+          "title": "Utterance End Candidates",
+          "type": "array"
+        },
+        "accepted_candidate": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EndCandidate"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "search_range": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TimeRange"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "audio_candidate_groups": {
+          "items": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "title": "Audio Candidate Groups",
+          "type": "array"
+        },
+        "review_reasons": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Review Reasons",
+          "type": "array"
+        }
+      },
+      "required": [
+        "cue_id",
+        "utterance_end_candidates"
+      ],
+      "title": "CueCandidates",
+      "type": "object"
+    },
+    "EndCandidate": {
+      "additionalProperties": false,
+      "properties": {
+        "time_ms": {
+          "minimum": 0,
+          "title": "Time Ms",
+          "type": "integer"
+        },
+        "method": {
+          "enum": [
+            "empty_timestamp_hint",
+            "band_energy_drop",
+            "vad_end",
+            "manual_profile",
+            "manual_confirmation"
+          ],
+          "title": "Method",
+          "type": "string"
+        },
+        "evidence_id": {
+          "minLength": 1,
+          "title": "Evidence Id",
+          "type": "string"
+        },
+        "status": {
+          "default": "unaccepted",
+          "enum": [
+            "unaccepted",
+            "inferred_draft_boundary",
+            "human_boundary"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reason"
+        },
+        "score": {
+          "anyOf": [
+            {
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Score"
+        },
+        "score_kind": {
+          "const": "uncalibrated_rank",
+          "default": "uncalibrated_rank",
+          "title": "Score Kind",
+          "type": "string"
+        },
+        "support": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TimeRange"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "quality_flags": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Quality Flags",
+          "type": "array"
+        },
+        "evidence": {
+          "additionalProperties": true,
+          "title": "Evidence",
+          "type": "object"
+        }
+      },
+      "required": [
+        "time_ms",
+        "method",
+        "evidence_id"
+      ],
+      "title": "EndCandidate",
+      "type": "object"
+    },
+    "TimeRange": {
+      "additionalProperties": false,
+      "properties": {
+        "start_ms": {
+          "minimum": 0,
+          "title": "Start Ms",
+          "type": "integer"
+        },
+        "end_ms": {
+          "exclusiveMinimum": 0,
+          "title": "End Ms",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "start_ms",
+        "end_ms"
+      ],
+      "title": "TimeRange",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "1.3",
+      "default": "1.3",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "cues": {
+      "items": {
+        "$ref": "#/$defs/CueCandidates"
+      },
+      "title": "Cues",
+      "type": "array"
+    },
+    "components": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "title": "Components",
+      "type": "object"
+    }
+  },
+  "required": [
+    "cues"
+  ],
+  "title": "CandidateDocument",
+  "type": "object"
+}

@@ -11,9 +11,9 @@ from .project import atomic_json
 from .tasks import (FIELDS, PATH_FIELDS, implementation_hashes, now, read_task,
                     resume_task, run_task, task_lock, validate_arguments)
 
-DEFAULTS = {"profile": None, "reuse_analysis": None, "analysis": None, "diagnostic": None,
+DEFAULTS = {"profile": None, "reuse_analysis": None, "analysis": None, "diagnostic": None, "boundaries": None, "vad_evidence": None,
             "resume": False, "elapsed_seconds": None, "notes": ""}
-FILE_INPUTS = {"config", "profile", "script"}
+FILE_INPUTS = {"config", "profile", "script", "vad_evidence"}
 Status = Literal["queued", "running", "completed", "failed", "cancelled", "blocked"]
 
 

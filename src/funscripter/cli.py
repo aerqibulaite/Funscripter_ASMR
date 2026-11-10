@@ -32,7 +32,7 @@ def execute_stage(command, arguments):
                                 args.diagnostic, args.elapsed_seconds, args.notes)
     if command == "fuse":
         from .fuse_project import fuse_project
-        return fuse_project(args.project, args.planning, args.output, args.profile, args.analysis)
+        return fuse_project(args.project, args.planning, args.output, args.profile, args.analysis, args.boundaries)
     if command == "plan":
         return plan_project(args.project, args.output, args.profile, args.resume)
     if command == "analyze":
@@ -40,6 +40,9 @@ def execute_stage(command, arguments):
     if command == "multiaxis-draft":
         from .multiaxis import export_multiaxis_draft
         return export_multiaxis_draft(args.project, args.profile, args.output)
+    if command == "utterance-candidates":
+        from .boundaries import create_boundary_candidates
+        return create_boundary_candidates(args.project, args.analysis, args.output, args.profile, args.vad_evidence)
     raise ValueError("unsupported stage command")
 
 
@@ -65,6 +68,7 @@ def main(argv=None):
     fuse.add_argument("project")
     fuse.add_argument("--planning", required=True)
     fuse.add_argument("--analysis")
+    fuse.add_argument("--boundaries", help="optional verified review-only utterance candidate bundle")
     fuse.add_argument("--profile", required=True)
     fuse.add_argument("--output", required=True)
     diagnostic = commands.add_parser("diagnostic", help="render a revision-bound MP4 and matching script")
@@ -105,6 +109,12 @@ def main(argv=None):
     multiaxis.add_argument("project")
     multiaxis.add_argument("--profile", required=True)
     multiaxis.add_argument("--output", required=True)
+    utterance = commands.add_parser("utterance-candidates", help="extract review-only audio end candidates")
+    utterance.add_argument("project")
+    utterance.add_argument("--analysis", required=True)
+    utterance.add_argument("--profile")
+    utterance.add_argument("--vad-evidence", help="optional precomputed VAD evidence JSON; no model is run")
+    utterance.add_argument("--output", required=True)
     task_status = commands.add_parser("task-status", help="read a persistent task record")
     task_status.add_argument("task_file")
     task_resume = commands.add_parser("task-resume", help="verify and recover a recorded task")
@@ -116,7 +126,7 @@ def main(argv=None):
     batch_status.add_argument("directory")
     batch_resume = commands.add_parser("batch-resume", help="verify and resume a serial batch")
     batch_resume.add_argument("directory")
-    for stage in (create, analyze, plan, fuse, diagnostic, archive, diff, regenerate, accept, restore, multiaxis):
+    for stage in (create, analyze, plan, fuse, diagnostic, archive, diff, regenerate, accept, restore, multiaxis, utterance):
         stage.add_argument("--task-file", help="optional task JSON outside inputs and output; default beside output")
     args = parser.parse_args(argv)
     try:

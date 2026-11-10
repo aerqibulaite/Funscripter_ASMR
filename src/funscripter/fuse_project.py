@@ -70,12 +70,13 @@ def load_semantics(directory, project, timeline):
     return data, outline, manifest
 
 
-def fuse_project(directory, planning, output, profile_path, analysis=None):
+def fuse_project(directory, planning, output, profile_path, analysis=None, boundaries=None):
     directory, planning, output = Path(directory).resolve(), Path(planning).resolve(), Path(output).resolve()
     analysis = Path(analysis).resolve() if analysis else None
+    boundaries = Path(boundaries).resolve() if boundaries else None
     if output.exists():
         raise ValueError("fusion output already exists; choose a new directory")
-    if any(output.is_relative_to(path) for path in [directory, planning] + ([analysis] if analysis else [])):
+    if any(output.is_relative_to(path) for path in [directory, planning] + ([analysis] if analysis else []) + ([boundaries] if boundaries else [])):
         raise ValueError("fusion output must be outside source directories")
     project, timeline, media, _ = reopen_project(directory)
     overrides = read_json(directory / project.artifacts["overrides"])
@@ -95,6 +96,19 @@ def fuse_project(directory, planning, output, profile_path, analysis=None):
         if audio.get("input_sha256") != project.artifact_hashes["analysis_audio"] or audio.get("sample_count") != media["sample_count"]:
             raise ValueError("audio evidence does not match analysis media")
     candidates = read_json(directory / project.artifacts["candidates"])
+    if boundaries:
+        from .boundaries import CandidateDocument, validate_document
+        boundary_manifest = read_json(boundaries / "boundary_manifest.json")
+        verify_source(boundary_manifest, project, "subtitle_sha256")
+        verify_bundle(boundaries, boundary_manifest, "artifact_hashes")
+        if ("utterance_candidates.json" not in boundary_manifest["artifact_hashes"]
+                or boundary_manifest.get("analysis_audio_sha256") != project.artifact_hashes["analysis_audio"]):
+            raise ValueError("boundary bundle does not match project audio")
+        if analysis and boundary_manifest.get("analysis_manifest_sha256") != sha256(analysis / "analysis_manifest.json"):
+            raise ValueError("boundary bundle uses a different analysis revision")
+        document = CandidateDocument.model_validate_json((boundaries / "utterance_candidates.json").read_text(encoding="utf-8"))
+        validate_document(document, timeline, media["duration_ms"])
+        candidates = document.model_dump(mode="json")
     plan, candidates, script, validation = build_plan(project, timeline, media["duration_ms"], semantic,
                                                      outline, audio, candidates, profile)
     plan = SegmentPlan.model_validate_json(json.dumps(plan, allow_nan=False)).model_dump(mode="json")
@@ -129,6 +143,7 @@ def fuse_project(directory, planning, output, profile_path, analysis=None):
             "audio_sha256": project.input_hashes["audio"],
             "planning_manifest_sha256": sha256(planning / "planning_run.json"),
             "analysis_manifest_sha256": sha256(analysis / "analysis_manifest.json") if analysis else None,
+            "boundary_manifest_sha256": sha256(boundaries / "boundary_manifest.json") if boundaries else None,
             "fusion_profile_sha256": sha256(profile_path),
             "implementation_hashes": {name: sha256(Path(__file__).with_name(name)) for name in
                 ["fusion.py", "motion.py", "models.py", "preview.py", "fuse_project.py"]},

@@ -1,0 +1,111 @@
+{
+  "$defs": {
+    "VadSpan": {
+      "additionalProperties": false,
+      "properties": {
+        "start_ms": {
+          "minimum": 0,
+          "title": "Start Ms",
+          "type": "integer"
+        },
+        "end_ms": {
+          "exclusiveMinimum": 0,
+          "title": "End Ms",
+          "type": "integer"
+        },
+        "evidence_id": {
+          "minLength": 1,
+          "title": "Evidence Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "start_ms",
+        "end_ms",
+        "evidence_id"
+      ],
+      "title": "VadSpan",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "1",
+      "default": "1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "input_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Input Sha256",
+      "type": "string"
+    },
+    "source_start_ms": {
+      "const": 0,
+      "default": 0,
+      "title": "Source Start Ms",
+      "type": "integer"
+    },
+    "status": {
+      "enum": [
+        "available",
+        "failed",
+        "disabled"
+      ],
+      "title": "Status",
+      "type": "string"
+    },
+    "extractor": {
+      "minLength": 1,
+      "title": "Extractor",
+      "type": "string"
+    },
+    "version": {
+      "minLength": 1,
+      "title": "Version",
+      "type": "string"
+    },
+    "model_sha256": {
+      "anyOf": [
+        {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Model Sha256"
+    },
+    "config_sha256": {
+      "anyOf": [
+        {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Config Sha256"
+    },
+    "spans": {
+      "items": {
+        "$ref": "#/$defs/VadSpan"
+      },
+      "title": "Spans",
+      "type": "array"
+    }
+  },
+  "required": [
+    "input_sha256",
+    "status",
+    "extractor",
+    "version"
+  ],
+  "title": "VadEvidence",
+  "type": "object"
+}

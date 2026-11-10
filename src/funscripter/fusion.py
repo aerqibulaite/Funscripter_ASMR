@@ -71,9 +71,17 @@ def resolve_boundaries(timeline, candidate_doc, profile, duration_ms):
     adopted = {}
     for cue in timeline.cues:
         row = records.setdefault(cue.cue_id, {"cue_id": cue.cue_id, "utterance_end_candidates": []})
+        saved = row.get("accepted_candidate")
         row["accepted_candidate"] = None
         manual = profile.manual_boundaries_ms.get(cue.cue_id)
-        if manual is not None:
+        if saved and saved.get("status") == "human_boundary":
+            time = saved.get("time_ms")
+            if type(time) is not int or cue.end_ms is None or not max(0, cue.start_ms) < time <= min(cue.end_ms, duration_ms):
+                raise ValueError("saved human boundary is outside its cue span")
+            if manual is not None and manual != time:
+                raise ValueError("manual profile conflicts with saved human boundary")
+            boundary = dict(saved)
+        elif manual is not None:
             if cue.end_ms is None or not max(0, cue.start_ms) < manual <= min(cue.end_ms, duration_ms):
                 raise ValueError("manual boundary must be after cue start and within its candidate span")
             boundary = {"time_ms": manual, "method": "manual_profile", "status": "human_boundary",
@@ -96,6 +104,8 @@ def resolve_boundaries(timeline, candidate_doc, profile, duration_ms):
 def build_plan(project, timeline, duration_ms, semantic, outline, audio, candidate_doc, profile):
     cues = {cue.cue_id: cue for cue in timeline.cues}
     candidate_doc, boundaries = resolve_boundaries(timeline, candidate_doc, profile, duration_ms)
+    end_rows = {row["cue_id"]: row for row in candidate_doc["cues"]}
+    end_anchors = {event["cue_id"] for event in semantic["events"] if event["anchor"] == "after_utterance"}
     phases = []
     if outline:
         for phase in outline.phases:
@@ -285,8 +295,12 @@ def build_plan(project, timeline, duration_ms, semantic, outline, audio, candida
         regions = []
         for cue_id in cue_ids:
             boundary = boundaries.get(cue_id)
+            end_row = end_rows.get(cue_id, {})
+            if cue_id in end_anchors and boundary is None:
+                reasons.extend("utterance_end:" + reason for reason in end_row.get("review_reasons", []))
             regions.append({"cue_id": cue_id, "region": ("inter_cue_gap" if start >= boundary["time_ms"] else "utterance_candidate") if boundary else "unsplit_cue",
-                            "boundary_status": boundary["status"] if boundary else "unknown_utterance_end"})
+                            "boundary_status": boundary["status"] if boundary else "unknown_utterance_end",
+                            "end_candidate_ids": [item["evidence_id"] for item in end_row.get("utterance_end_candidates", [])]})
         if len(cue_ids) > 1:
             reasons.append("overlapping_subtitle_coverage")
         if not cue_ids:

@@ -20,7 +20,7 @@ FIELDS = {
     "create": {"config", "output"},
     "analyze": {"project", "output", "profile", "reuse_analysis"},
     "plan": {"project", "output", "profile", "resume"},
-    "fuse": {"project", "planning", "analysis", "profile", "output"},
+    "fuse": {"project", "planning", "analysis", "boundaries", "profile", "output"},
     "diagnostic": {"project", "draft", "profile", "output"},
     "archive-revision": {"project", "baseline", "script", "diagnostic", "output", "elapsed_seconds", "notes"},
     "diff-revision": {"project", "revision", "baseline", "profile", "output"},
@@ -28,9 +28,10 @@ FIELDS = {
     "accept-candidate": {"project", "candidate", "candidate_id", "output"},
     "restore-revision": {"project", "applied", "target", "output"},
     "multiaxis-draft": {"project", "profile", "output"},
+    "utterance-candidates": {"project", "analysis", "profile", "vad_evidence", "output"},
 }
 PATH_FIELDS = {"config", "output", "project", "profile", "planning", "analysis", "draft",
-               "baseline", "script", "diagnostic", "revision", "diff", "candidate", "applied", "reuse_analysis"}
+               "baseline", "script", "diagnostic", "revision", "diff", "candidate", "applied", "reuse_analysis", "boundaries", "vad_evidence"}
 
 
 class Task(Model):
@@ -97,7 +98,9 @@ def validate_arguments(command, arguments):
     if command not in FIELDS or set(arguments) != FIELDS[command]:
         raise ValueError("invalid task command or arguments")
     for key, value in arguments.items():
-        optional = (key == "profile" and command in ("analyze", "plan")) or (
+        optional = (key == "profile" and command in ("analyze", "plan", "utterance-candidates")) or (
+            key == "vad_evidence" and command == "utterance-candidates") or (
+            key == "boundaries" and command == "fuse") or (
             key == "reuse_analysis" and command == "analyze") or (
             key == "analysis" and command == "fuse") or (key == "diagnostic" and command == "archive-revision")
         if key in PATH_FIELDS:
@@ -129,6 +132,8 @@ def read_task(path):
     task = Task.model_validate_json(Path(path).read_text(encoding="utf-8"))
     if task.command == "analyze":
         task.arguments.setdefault("reuse_analysis", None)
+    if task.command == "fuse":
+        task.arguments.setdefault("boundaries", None)
     if task.schema_version != "1" or task.execution_status not in {
             "queued", "running", "completed", "failed", "cancelled"}:
         raise ValueError("unsupported task schema or status")

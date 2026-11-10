@@ -12,6 +12,8 @@
 
 阶段 8 已提供多轴离线契约准备：`multiaxis-draft PROJECT --profile config/multiaxis-offline-example.yaml --output NEW_DIR` 支持显式启用、独立预设、数值跟随和联动预算检查。当前生成数值测试草稿，实际多轴播放与硬件尚未验收，详见 [多轴离线说明](docs/multiaxis-offline.md)。
 
+句尾候选阶段可读取已有分析：`utterance-candidates PROJECT --analysis ANALYSIS --profile config/boundary-example.yaml --output NEW_DIR`。支持分频下降候选、可选 VAD 结果导入，并通过 `fuse --boundaries` 进入复核；不自动采用音频候选，详见 [句尾候选说明](docs/utterance-candidates.md)。
+
 ## 快速运行
 
 需要 Python 3.11+。本机在 Python 3.13.13 验证。运行依赖锁定于 pyproject.toml；安装时按本机 pip 配置访问软件源。
