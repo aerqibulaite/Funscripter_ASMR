@@ -98,6 +98,18 @@
       "default": null,
       "title": "Semantic Knowledge File"
     },
+    "outline_seed_dir": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Outline Seed Dir"
+    },
     "token_count_method": {
       "default": "conservative",
       "enum": [

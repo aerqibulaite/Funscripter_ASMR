@@ -210,13 +210,17 @@ def plan_project(directory, output, profile_path=None, resume=False, transport=N
         raise ValueError("planning output must be outside the source project")
     planner = Planner(config, output, transport, input_kind=project.config.subtitles.source_kind)
     eligible, input_view = planning_inputs(timeline, media["duration_ms"])
+    seed, seed_hash = None, None
+    if config.outline_seed_dir:
+        from .planning_repair import load_outline_seed
+        seed, seed_hash = load_outline_seed(config.outline_seed_dir, project, eligible, planner.knowledge_hash)
     planner.quality_flags = {row["cue_id"]: row["quality_flags"] for row in input_view["cues"]}
     planner.assessments = [{"cue_id": row["cue_id"], "status": "excluded", "reason": "; ".join(row["reasons"])}
                            for row in input_view["cues"] if row["status"] == "excluded"]
     signature = digest({"project_id": project.project_id, "revision_id": project.revision_id,
         "subtitles": project.artifact_hashes["subtitles"], "config": config.model_dump(mode="json"),
         "implementation": planner.implementation_hash, "prompt_version": PROMPT_VERSION,
-        "knowledge_sha256": planner.knowledge_hash})
+        "knowledge_sha256": planner.knowledge_hash, "outline_seed_sha256": seed_hash})
     run_path = output / "planning_run.json"
     if output.exists():
         if not resume:
@@ -233,6 +237,7 @@ def plan_project(directory, output, profile_path=None, resume=False, transport=N
         "config": config.model_dump(mode="json"), "prompt_version": PROMPT_VERSION,
         "implementation_sha256": planner.implementation_hash,
         "knowledge_sha256": planner.knowledge_hash,
+        "outline_seed_sha256": seed_hash,
         "token_budget_method": planner.budget_method,
         "status": "running", "human_review_required": True,
         "semantic_schema_version": "1.4", "eligible_cue_count": len(eligible),
@@ -244,10 +249,13 @@ def plan_project(directory, output, profile_path=None, resume=False, transport=N
     events, failures = [], []
     outline = None
     try:
-        outline, strategy = planner.outline(eligible) if eligible else (None, "no_eligible_cues")
+        outline, strategy = ((seed, "recovered_outline") if seed is not None else
+                             planner.outline(eligible) if eligible else (None, "no_eligible_cues"))
         run["global_input_strategy"] = strategy
         if outline is None:
             failures = [{"cue_id": cue.cue_id, "reason": "global_outline_failed"} for cue in eligible]
+            last_error = next((row["error"] for row in reversed(planner.trace) if row.get("error")), "global_outline_failed")
+            run["error"] = f"{strategy}: {last_error}"
         else:
             atomic_json(output / "outline.json", outline.model_dump(mode="json"))
             events, failures = planner.semantic(eligible, outline)

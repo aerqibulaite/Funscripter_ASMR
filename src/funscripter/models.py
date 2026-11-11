@@ -106,6 +106,7 @@ class LLMConfig(Model):
     max_chunk_cues: int = Field(default=32, ge=1, le=256)
     context_cues: int = Field(default=1, ge=0, le=8)
     semantic_knowledge_file: str | None = None
+    outline_seed_dir: str | None = None
     token_count_method: Literal["conservative", "server"] = "conservative"
     outline_max_phases: int = Field(default=8, ge=1, le=64)
     outline_summary_chars: int = Field(default=160, ge=40, le=1000)

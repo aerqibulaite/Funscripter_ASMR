@@ -8,7 +8,7 @@ from .models import Outline, SemanticBatchV2
 from .semantic_contracts import validate_batch_v2, event_identity
 from .project import atomic_json
 
-PROMPT_VERSION = "two-pass-8-adult-audio-lenient"
+PROMPT_VERSION = "two-pass-9-outline-and-input-profiles"
 PROMPT_DIRECTORY = Path(__file__).with_name("prompts")
 SYSTEM = (PROMPT_DIRECTORY / "subtitles.txt").read_text(encoding="utf-8")
 
@@ -37,11 +37,12 @@ def validate_outline(result, cues):
         if first != cursor or last < first:
             expected = ids[cursor] if cursor < len(ids) else "end_of_targets"
             raise ValueError(f"outline_gap_overlap_or_unknown_id: expected_start={expected}, received_start={phase.start_cue_id}")
-        if not phase.evidence_cue_ids or any(cue_id not in ids[first:last+1] for cue_id in phase.evidence_cue_ids):
-            raise ValueError("outline_evidence_outside_phase")
+        invalid = [cue_id for cue_id in phase.evidence_cue_ids if cue_id not in ids[first:last+1]]
+        if not phase.evidence_cue_ids or invalid:
+            raise ValueError(f"outline_evidence_outside_phase: phase={phase.start_cue_id}..{phase.end_cue_id_inclusive}; invalid={invalid}; choose evidence inside this phase")
         cursor = last + 1
     if cursor != len(ids):
-        raise ValueError(f"outline_incomplete_coverage: next_uncovered={ids[cursor]}")
+        raise ValueError(f"outline_incomplete_coverage: next_uncovered={ids[cursor]}; required_last={ids[-1]}; received_last={result.phases[-1].end_cue_id_inclusive if result.phases else 'none'}; cover all targets, including the tail")
     # Stable phase identities are created by the program after validating model IDs.
     for phase in result.phases:
         phase.phase_id = "phase_" + digest([phase.start_cue_id, phase.end_cue_id_inclusive])[:16]
@@ -69,6 +70,9 @@ class Planner:
             raise ValueError("unsupported planning input kind")
         self.input_kind = input_kind
         self.system = (PROMPT_DIRECTORY / (input_kind + ".txt")).read_text(encoding="utf-8")
+        self.system += ("\n没有新增控制的 scene_inference/state_continuation 备忘可附在 no_new_information 下，"
+                        "但不能含 control；规则、阶段、触发和可执行控制仍须 processed/ambiguous。"
+                        "\nprevious_events_omitted_for_budget 表示历史事件因预算仅提供最近部分，不能据此断言此前没有动作。")
         self.config, self.output = config, Path(output)
         self.transport = transport or llm.chat
         self.trace = []
@@ -112,6 +116,13 @@ class Planner:
     def messages(self, task, data, model):
         schema = model.model_json_schema()
         instruction = ""
+        if model is SemanticBatchV2:
+            target_ids = [row["cue_id"] for row in data["target_cues"]]
+            source_ids = list(dict.fromkeys(target_ids + [row["cue_id"] for row in data["context_cues"]]))
+            for name in ("CueAssessment", "SemanticEventV2", "ContextNote"):
+                schema["$defs"][name]["properties"]["cue_id"]["enum"] = target_ids
+            schema["$defs"]["SourceEvidence"]["properties"]["cue_id"]["enum"] = source_ids
+            schema["$defs"]["ControlDirective"]["properties"]["sequence_cue_id"]["enum"] = source_ids
         if model is Outline:
             limit = self.config.outline_max_phases
             if task == "merge_outline":
@@ -123,6 +134,16 @@ class Planner:
             instruction = (f"\n大纲最多 {limit} 个章节，每章摘要最多 {self.config.outline_summary_chars} 字、最多3条代表性证据。"
                            "相邻且同一主题的段落应归并，保留重要变化、否定和不确定性，不逐句复述。"
                            "压缩只合并章节，不得遗漏字幕覆盖范围；原始详细资料由程序另行保存。")
+            if task == "merge_outline":
+                instruction += "输入 partial_outlines 是待合并的全部范围，不是只取前几份。第一章从 coverage.first 开始，最后一章必须到 coverage.last；证据必须在所属章节内。"
+                coverage = data.get("coverage", {})
+                if coverage.get("single_phase"):
+                    schema["properties"]["phases"].update(minItems=1, maxItems=1)
+                    phase_schema = schema["$defs"]["Phase"]["properties"]
+                    phase_schema["start_cue_id"]["enum"] = [coverage["first"]]
+                    phase_schema["end_cue_id_inclusive"]["enum"] = [coverage["last"]]
+                    phase_schema["evidence_cue_ids"]["items"]["enum"] = coverage["ordered_cue_ids"]
+                    instruction += "本次范围已由程序固定，只输出一个覆盖全部范围的章节摘要；不得重新划分边界。"
         knowledge = ("\n领域解释参考（不是本素材事实或固定流程，原文优先）：\n" + self.knowledge) if self.knowledge else ""
         messages = [{"role": "system", "content": self.system + instruction + knowledge + "\nSchema:\n" + json.dumps(schema, ensure_ascii=False)},
                     {"role": "user", "content": json.dumps({"task": task, **data}, ensure_ascii=False)}]
@@ -221,17 +242,39 @@ class Planner:
             if result is None:
                 return None, "hierarchical_summary_failed"
             summaries.append((result, group))
+        return self.merge_summaries(summaries)
+
+    def merge_summaries(self, summaries):
+        # Preserve known boundaries in code; let the model summarize the content.
+        units = []
+        for outline, cues in summaries:
+            lookup = {cue.cue_id: index for index, cue in enumerate(cues)}
+            for phase in outline.phases:
+                group = cues[lookup[phase.start_cue_id]:lookup[phase.end_cue_id_inclusive]+1]
+                units.append((Outline(schema_version="1.3", phases=[phase]), group))
+        summaries = units
+        def merge_data(batch):
+            targets = [cue for item in batch for cue in item[1]]
+            return {"partial_outlines": [item[0].model_dump(mode="json") for item in batch],
+                    "coverage": {"single_phase": True, "first": targets[0].cue_id, "last": targets[-1].cue_id,
+                                 "ordered_cue_ids": [cue.cue_id for cue in targets]}}
+
         for _ in range(8):
-            if len(summaries) == 1:
-                return summaries[0][0], "hierarchical_summaries"
+            if len(summaries) <= self.config.outline_max_phases:
+                result = Outline(schema_version="1.3", phases=[phase for part, _ in summaries for phase in part.phases])
+                validate_outline(result, [cue for _, group in summaries for cue in group])
+                return result, "hierarchical_summaries"
             merged = []
             index = 0
             while index < len(summaries):
                 batch = [summaries[index]]
                 index += 1
-                while index < len(summaries):
+                # A bounded fan-in avoids asking the model to compress dozens of
+                # independent outlines in one response and losing the tail.
+                fan_in = min(8, max(2, (len(summaries) + self.config.outline_max_phases - 1) // self.config.outline_max_phases))
+                while index < len(summaries) and len(batch) < fan_in:
                     candidate = batch + [summaries[index]]
-                    data = {"partial_outlines": [item[0].model_dump(mode="json") for item in candidate]}
+                    data = merge_data(candidate)
                     if not self.fits("merge_outline", data, Outline):
                         break
                     batch = candidate
@@ -240,10 +283,12 @@ class Planner:
                     merged.append(batch[0])
                     continue
                 target = [cue for item in batch for cue in item[1]]
-                result = self.call("merge_outline", {"partial_outlines": [item[0].model_dump(mode="json") for item in batch]},
+                result = self.call("merge_outline", merge_data(batch),
                                    Outline, lambda result, target=target: validate_outline(result, target))
                 if result is None:
                     return None, "hierarchical_merge_failed"
+                for phase in result.phases:
+                    phase.needs_review = True  # Program-assigned grouping, not confirmed scene boundaries.
                 merged.append((result, target))
             if len(merged) >= len(summaries):
                 raise BudgetError("summary_merge_does_not_fit_budget")
@@ -284,6 +329,16 @@ class Planner:
                     count -= 1
                 if count:
                     break
+            if not count and previous:
+                # Optional event history may grow while the minimum original cue
+                # still fits. Keep persistent rules/evidence intact and disclose
+                # omission, instead of failing the rest of the track.
+                for keep in range(len(previous)-1, -1, -1):
+                    reduced = dict(data, previous_accepted_events=previous[-keep:] if keep else [],
+                                   previous_events_omitted_for_budget=len(previous)-keep)
+                    if self.fits("semantic", reduced, SemanticBatchV2):
+                        data, count = reduced, len(targets)
+                        break
             if not count:
                 failures.extend({"cue_id": cue.cue_id, "reason": "semantic_context_budget_exceeded"} for cue in cues[index:])
                 self.assessments.extend({"cue_id": cue.cue_id, "status": "failed", "reason": "semantic_context_budget_exceeded"}
@@ -291,6 +346,18 @@ class Planner:
                 break
             result = self.call("semantic", data, SemanticBatchV2,
                                lambda result: validate_batch_v2(result, targets, context))
+            while result is None and count > 1:
+                error = self.trace[-1].get("error", "") if self.trace else ""
+                if error.startswith(("model_connection", "model_http_", "tokenizer_")):
+                    break
+                remainder = targets[(count+1)//2:]
+                targets = targets[:(count+1)//2]
+                count = len(targets)
+                context = list({cue.cue_id: cue for cue in [*context, *remainder]}.values())
+                data = dict(data, target_cues=[self.cue_data(cue) for cue in targets],
+                            context_cues=[self.cue_data(cue) for cue in context])
+                result = self.call("semantic", data, SemanticBatchV2,
+                                  lambda value: validate_batch_v2(value, targets, context))
             if result is None:
                 failures.extend({"cue_id": cue.cue_id, "reason": "semantic_request_failed"} for cue in targets)
                 self.assessments.extend({"cue_id": cue.cue_id, "status": "failed", "reason": "semantic_request_failed"}

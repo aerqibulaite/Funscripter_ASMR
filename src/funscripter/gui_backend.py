@@ -17,6 +17,41 @@ def absolute(value):
     return str(Path(value.strip().strip('"')).expanduser().resolve())
 
 
+def format_stage_failure(result):
+    """Show an actionable reason, keeping the full manifest in its saved files."""
+    output = Path(result["output"]) if result.get("output") else None
+    reason, stage = None, None
+    if output is not None:
+        try:
+            run = json.loads((output / "planning_run.json").read_text(encoding="utf-8"))
+            reason = run.get("error")
+            stage = run.get("global_input_strategy")
+        except (OSError, ValueError, TypeError, AttributeError):
+            pass
+        try:
+            log = json.loads((output / "request_log.json").read_text(encoding="utf-8"))
+            failed = next((row for row in reversed(log) if row.get("status") == "failed" and row.get("error")), None)
+            if failed:
+                reason = reason or failed["error"]
+                stage = stage or failed.get("task")
+        except (OSError, ValueError, TypeError, AttributeError):
+            pass
+    reason = str(reason or result.get("error") or "阶段未完成，请查看保存的任务记录。")[:600]
+    explanation = next((text for code, text in (
+        ("outline_incomplete_coverage", "大纲遗漏了部分字幕，未覆盖完整范围。"),
+        ("outline_evidence_outside_phase", "大纲的证据引用超出了所属章节。"),
+        ("outline_gap_overlap_or_unknown_id", "大纲章节存在缺口、重叠或未知字幕编号。")) if code in reason), "")
+    lines = ["任务已取消" if result.get("execution_status") == "cancelled" else "任务失败",
+             "原因：" + explanation + reason]
+    if stage:
+        lines.append("阶段：" + str(stage)[:100])
+    if output is not None:
+        lines.extend(["输出目录：" + str(output), "请求记录：" + str(output / "request_log.json")])
+    if result.get("task_file"):
+        lines.append("任务记录：" + str(result["task_file"]))
+    return "\n".join(lines)
+
+
 def load_model(path):
     from .model_profiles import load_model_profile
     return load_model_profile(path)

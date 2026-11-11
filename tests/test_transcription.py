@@ -1,5 +1,6 @@
 """Offline integration tests for source separation, timing and bundle integrity."""
 import json
+import os
 import tempfile
 import unittest
 import wave
@@ -14,6 +15,7 @@ from funscripter.models import LLMConfig
 from funscripter.planner import Planner
 from funscripter.project import plan_project, reopen_project
 from funscripter.transcription import load_profile, probe_whisper, transcribe_audio, verify_transcription
+from funscripter import transcription
 from test_planner import mock_transport
 
 
@@ -42,6 +44,23 @@ class TranscriptionTests(unittest.TestCase):
             self.calls.append((audio, kwargs))
             return iter([self.segment]), Row(language="ja")
         return Row(transcribe=transcribe)
+
+    @unittest.skipUnless(os.name == "nt", "Windows DLL search paths")
+    def test_nvidia_wheel_dll_directories_persist_without_duplicate_registration(self):
+        library = self.root / "bin" / "cublas64_12.dll"
+        library.parent.mkdir()
+        library.touch()
+        installed = Row(files=[Path("bin/cublas64_12.dll")],
+                        locate_file=lambda name: self.root / name)
+        with patch("funscripter.transcription.distribution", return_value=installed), \
+                patch("funscripter.transcription.os.add_dll_directory") as register, \
+                patch.dict(transcription._CUDA_DLL_HANDLES, {}, clear=True), \
+                patch.dict(os.environ, {"PATH": "existing-runtime-path"}):
+            transcription.configure_windows_cuda_libraries()
+            transcription.configure_windows_cuda_libraries()
+            register.assert_called_once_with(str(library.parent.resolve()))
+            self.assertIs(transcription._CUDA_DLL_HANDLES[library.parent.resolve()], register.return_value)
+            self.assertEqual(os.environ["PATH"], str(library.parent.resolve()) + os.pathsep + "existing-runtime-path")
 
     def transcribe(self, output=None):
         return transcribe_audio(self.audio, output or self.root / "asr", self.profile,

@@ -14,6 +14,14 @@ python -m pip install -e ".[whisper]"
 
 编辑 `config/whisper-local.yaml`：`model_path` 填模型目录，`language` 默认 `ja`（设为 null 可自动识别），默认使用 CPU/int8。GPU 可按实际环境设置 `device: cuda` 和支持的 `compute_type`；CUDA 依赖要求参阅 [faster-whisper 官方说明](https://github.com/SYSTRAN/faster-whisper#gpu)。不会自动安装 CUDA 或选择显存配置。
 
+Windows 上若加载模型成功、实际转写却提示缺少 `cublas64_12.dll` 或 cuDNN，可在项目 Python 环境安装 NVIDIA 的 CUDA 12 运行库：
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install nvidia-cublas-cu12 nvidia-cudnn-cu12
+```
+
+程序加载 Whisper 前会注册当前 Python 环境中这些 NVIDIA 包的 DLL 目录，无需修改系统 PATH。运行库安装完成后重启程序。仅“测试模型加载”通过不足以确认推理依赖齐全，还应运行一段短音频转写。
+
 GUI 中先在“输入与项目”选择音频，再进入“语音模型 · Whisper”页。可直接填写模型目录、设备、计算精度、语言和搜索宽度，也可载入/保存 YAML；高级设置载入后保留。“测试模型加载”实际加载后释放模型，不运行识别，不维持后台服务。点击“转写输入页所选音频”后，结果目录自动填回输入页，再点击“创建新项目”。也可直接选择已有转写目录创建项目，不会重新转写。
 
 字幕路径和编码不参与转写，偏移须为 0；视频沿用输入页的容器时间轴和音轨选择。转写按原语言执行，不自动翻译为中文。“语义模型 · Qwen / LLM”页单独配置文本理解服务，后续在“分步测试”执行模型规划。转写结果与创建项目时的音频或音轨不一致会被拒绝。

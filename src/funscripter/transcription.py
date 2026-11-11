@@ -4,7 +4,7 @@ import math
 import os
 import shutil
 import tempfile
-from importlib.metadata import PackageNotFoundError, version
+from importlib.metadata import PackageNotFoundError, distribution, version
 from pathlib import Path
 
 import yaml
@@ -13,6 +13,28 @@ from pydantic import Field
 from .media import decode_audio, sha256
 from .models import Model
 from .project import atomic_json
+
+
+_CUDA_DLL_HANDLES = {}
+
+
+def configure_windows_cuda_libraries():
+    """Expose optional NVIDIA wheels installed in this Python environment."""
+    if os.name != "nt":
+        return
+    for package in ("nvidia-cublas-cu12", "nvidia-cudnn-cu12", "nvidia-cuda-nvrtc-cu12"):
+        try:
+            installed = distribution(package)
+        except PackageNotFoundError:
+            continue
+        directories = {Path(installed.locate_file(name)).parent.resolve()
+                       for name in installed.files or [] if str(name).lower().endswith(".dll")}
+        for directory in sorted(directories):
+            if not directory.is_dir() or directory in _CUDA_DLL_HANDLES:
+                continue
+            _CUDA_DLL_HANDLES[directory] = os.add_dll_directory(str(directory))
+            # CTranslate2 also loads CUDA libraries through native LoadLibrary.
+            os.environ["PATH"] = str(directory) + os.pathsep + os.environ.get("PATH", "")
 
 
 class TranscriptionProfile(Model):
@@ -47,6 +69,7 @@ def load_local_model(profile, model_factory=None):
                                          ("model.bin", "config.json", "tokenizer.json")):
         raise ValueError("需要本地 CTranslate2 模型目录（model.bin、config.json、tokenizer.json）；.pt 和 Transformers 权重需先转换")
     if model_factory is None:
+        configure_windows_cuda_libraries()
         try:
             from faster_whisper import WhisperModel
         except ImportError as exc:

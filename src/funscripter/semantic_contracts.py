@@ -31,8 +31,14 @@ def validate_batch_v2(result, targets, context=(), final=False):
     identities = set()
     note_anchors = set()
     for note in result.context_notes:
-        if note.cue_id not in targets or assessments[note.cue_id].status not in ("processed", "ambiguous"):
-            raise ValueError("semantic_note_anchor_or_assessment_invalid")
+        # A non-executable scene memo may restate ongoing context without a new
+        # control instruction. Keep stricter ownership/status rules for controls.
+        allowed = {"processed", "ambiguous"}
+        if note.control is None and note.kind in ("scene_inference", "state_continuation"):
+            allowed.add("no_new_information")
+        if note.cue_id not in targets or assessments[note.cue_id].status not in allowed:
+            status = assessments[note.cue_id].status if note.cue_id in assessments else "not_target"
+            raise ValueError(f"semantic_note_anchor_or_assessment_invalid: cue_id={note.cue_id}; assessment={status}; rule/control notes require processed or ambiguous; only non-executable scene/state memos may use no_new_information")
         sources = note.source_cue_ids
         if len(sources) != len(set(sources)) or note.cue_id not in sources or set(sources) - set(lookup):
             raise ValueError("semantic_note_source_ids_invalid")
@@ -79,7 +85,7 @@ def validate_batch_v2(result, targets, context=(), final=False):
         anchored.setdefault(event.cue_id, []).append(event)
     for cue_id, assessment in assessments.items():
         if assessment.status == "processed" and cue_id not in anchored and cue_id not in note_anchors:
-            raise ValueError("semantic_processed_assessment_without_event")
+            raise ValueError(f"semantic_processed_assessment_without_event: cue_id={cue_id}; processed requires an event or context_note anchored to this cue; if neither exists use no_new_information")
     indices = {cue_id: index for index, cue_id in enumerate(targets)}
     result.events.sort(key=lambda event: indices[event.cue_id])
 

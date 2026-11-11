@@ -80,6 +80,44 @@ class BudgetTests(unittest.TestCase):
             saved = list(Path(directory).glob("requests/*/request-2.json"))
             self.assertEqual(len(saved), 1)
 
+    def test_many_partials_merge_in_bounded_groups_with_explicit_tail(self):
+        seen = []
+        def transport(config, messages, schema):
+            payload = json.loads(messages[-1]["content"])
+            self.assertLessEqual(len(payload["partial_outlines"]), 8)
+            coverage = payload["coverage"]
+            self.assertEqual(schema["properties"]["phases"]["maxItems"], 1)
+            self.assertEqual(schema["$defs"]["Phase"]["properties"]["start_cue_id"]["enum"], [coverage["first"]])
+            self.assertEqual(schema["$defs"]["Phase"]["properties"]["end_cue_id_inclusive"]["enum"], [coverage["last"]])
+            self.assertEqual(coverage["first"], coverage["ordered_cue_ids"][0])
+            self.assertEqual(coverage["last"], coverage["ordered_cue_ids"][-1])
+            seen.append(coverage["last"])
+            return mock_transport(config, messages, schema)
+        cues = [SimpleNamespace(cue_id=f"cue_{i*2+1:06}") for i in range(400)]
+        summaries = []
+        for start in range(0, 400, 8):
+            group = cues[start:start+8]
+            partial = Outline(schema_version="1.3", phases=[{"phase_id": "p", "start_cue_id": group[0].cue_id,
+                "end_cue_id_inclusive": group[-1].cue_id, "summary": "neutral", "trend_hint": "unknown",
+                "evidence_cue_ids": [group[0].cue_id], "needs_review": True}])
+            summaries.append((partial, group))
+        with tempfile.TemporaryDirectory() as directory:
+            planner = Planner(self.config(), directory, transport)
+            outline, strategy = planner.merge_summaries(summaries)
+            validate_outline(outline, cues)
+            self.assertEqual(strategy, "hierarchical_summaries")
+            self.assertEqual(outline.phases[-1].end_cue_id_inclusive, cues[-1].cue_id)
+            self.assertEqual(len(outline.phases), 8)
+            self.assertLessEqual(len(seen), 8)
+
+    def test_bad_phase_evidence_feedback_names_offending_range(self):
+        cues = [SimpleNamespace(cue_id=f"c{i}") for i in range(3)]
+        result = Outline(schema_version="1.3", phases=[{"phase_id": "p", "start_cue_id": "c0",
+            "end_cue_id_inclusive": "c1", "summary": "neutral", "trend_hint": "unknown",
+            "evidence_cue_ids": ["c2"], "needs_review": True}])
+        with self.assertRaisesRegex(ValueError, "phase=c0..c1; invalid=\\['c2'\\]"):
+            validate_outline(result, cues)
+
 
 if __name__ == "__main__":
     unittest.main()

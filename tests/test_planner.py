@@ -225,6 +225,24 @@ class PlanningTests(unittest.TestCase):
         self.assertEqual(run["event_count"], 8)
         self.assertEqual(run["failure_count"], 0)
 
+    def test_invalid_multi_cue_response_subdivides_without_losing_ownership(self):
+        project = self.create()
+        sizes = []
+        def transport(config, messages, schema):
+            payload = json.loads(messages[-1]["content"])
+            if payload["task"] == "semantic":
+                sizes.append(len(payload["target_cues"]))
+                if sizes[-1] > 1:
+                    return "invalid JSON", {}
+            return mock_transport(config, messages, schema)
+        run = plan_project(project, self.root / "subdivided", self.profile_path, transport=transport)
+        self.assertEqual(run["failure_count"], 0)
+        self.assertEqual(run["event_count"], 8)
+        data = json.loads((self.root / "subdivided/semantic_events.json").read_text("utf-8"))
+        self.assertEqual(len({row["cue_id"] for row in data["cue_assessments"]}), 8)
+        self.assertIn(1, sizes)
+        self.assertIn(2, sizes)
+
     def test_cancelled_run_preserves_cache_and_resumes(self):
         project = self.create()
         def cancel(config, messages, schema):

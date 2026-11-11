@@ -1,0 +1,23 @@
+# Local model: D:/AI/llama.cpp/models/gemma-4-12b-it-UD-Q5_K_XL.gguf
+# Paired with launch_gemma_server.cmd (port 8081, one slot, 32768 context).
+# Stop Qwen before starting Gemma to free GPU memory.
+backend: llama_cpp
+base_url: http://127.0.0.1:8081
+model_id: gemma-4-12b-it-UD-Q5_K_XL
+model_revision: local-gguf
+quantization: UD-Q5_K_XL
+api_key_env: null
+timeout_seconds: 600.0
+max_retries: 1
+context_budget_tokens: 32768
+token_count_method: server
+outline_max_phases: 8
+outline_summary_chars: 160
+max_output_tokens: 4096
+safety_tokens: 1024
+max_chunk_cues: 8
+context_cues: 2
+semantic_knowledge_file: semantic-knowledge.md
+thinking: false
+temperature: 0.2
+top_p: 0.9

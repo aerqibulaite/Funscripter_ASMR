@@ -30,6 +30,16 @@ def note(c, kind="scene_inference", basis="inferred"):
 
 
 class ContextTests(unittest.TestCase):
+    def test_no_new_action_can_keep_non_executable_context_memo(self):
+        c = cue("c1", "状态仍然一样")
+        result = batch([c])
+        payload = result.model_dump()
+        payload["context_notes"] = [note(c)]
+        validate_batch_v2(SemanticBatchV2.model_validate(payload), [c])
+        payload["context_notes"][0]["kind"] = "rule_definition"
+        with self.assertRaisesRegex(ValueError, "note_anchor_or_assessment"):
+            validate_batch_v2(SemanticBatchV2.model_validate(payload), [c])
+
     def test_note_only_processed_and_saved_bundle_validate_without_action(self):
         c = cue("c1", "先讲规则，听到铃声就停")
         result = batch([c], statuses={c.cue_id: "processed"})

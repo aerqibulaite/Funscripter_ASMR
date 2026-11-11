@@ -8,7 +8,7 @@ from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
 from tkinter.scrolledtext import ScrolledText
 
-from .gui_backend import DesktopController, absolute, load_model, probe_model, save_model
+from .gui_backend import DesktopController, absolute, load_model, probe_model, save_model, format_stage_failure
 from .models import LLMConfig
 from .review_panel import ReviewPanel
 
@@ -334,7 +334,7 @@ class DesktopApp:
             try:
                 result = work()
                 if result.get("execution_status") in ("failed", "cancelled"):
-                    raise ValueError(json.dumps(result, ensure_ascii=False))
+                    raise ValueError(format_stage_failure(result))
                 self.events.put((label, target, result, None))
             except Exception as exc:
                 self.events.put((label, target, None, f"{type(exc).__name__}: {exc}"))

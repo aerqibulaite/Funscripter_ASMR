@@ -6,9 +6,10 @@ from .models import LLMConfig
 
 
 def resolve_knowledge(config, base):
-    if config.semantic_knowledge_file:
-        config = config.model_copy(update={"semantic_knowledge_file": str(
-            (Path(base) / config.semantic_knowledge_file).resolve())})
+    updates = {field: str((Path(base) / getattr(config, field)).resolve())
+               for field in ("semantic_knowledge_file", "outline_seed_dir") if getattr(config, field)}
+    if updates:
+        config = config.model_copy(update=updates)
     return config
 
 

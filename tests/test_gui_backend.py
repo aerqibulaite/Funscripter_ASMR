@@ -6,7 +6,7 @@ import wave
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-from funscripter.gui_backend import DesktopController, load_model, probe_model, save_model
+from funscripter.gui_backend import DesktopController, load_model, probe_model, save_model, format_stage_failure
 from funscripter.models import LLMConfig
 from funscripter.tasks import task_summary
 
@@ -61,6 +61,23 @@ class DesktopBackendTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             save_model(path, {**values, "max_output_tokens": values["context_budget_tokens"]})
         self.assertEqual(load_model(path).model_dump(mode="json"), values)
+
+    def test_failure_message_reads_reason_without_dumping_manifest(self):
+        output = self.root / "failed-plan"
+        output.mkdir()
+        (output / "planning_run.json").write_text(json.dumps({"global_input_strategy": "hierarchical_merge_failed",
+            "config": {"model_id": "large configuration" * 100}}), encoding="utf-8")
+        (output / "request_log.json").write_text(json.dumps([{"status": "failed", "task": "merge_outline",
+            "error": "outline_incomplete_coverage: next_uncovered=c225"}]), encoding="utf-8")
+        text = format_stage_failure({"execution_status": "failed", "output": str(output),
+            "task_file": str(self.root / "task.json"), "signature": "long hash", "config": {"hidden": "irrelevant"}})
+        self.assertIn("outline_incomplete_coverage", text)
+        self.assertIn("request_log.json", text)
+        self.assertNotIn("signature", text)
+        self.assertNotIn("large configuration", text)
+        self.assertLess(len(text), 1500)
+        (output / "request_log.json").write_text("invalid", encoding="utf-8")
+        self.assertIn("connection failed", format_stage_failure({"output": str(output), "error": "connection failed"}))
 
     def test_connection_probe_exercises_both_real_http_adapters(self):
         seen = []
