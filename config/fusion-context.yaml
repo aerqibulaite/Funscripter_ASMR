@@ -5,6 +5,9 @@ unknown_policy: maintain_state
 # Optional generic controls. No progress-dependent parameter changes by default.
 progress_curve: []
 allow_inferred_controls: false
+# 宽松模式：无法确定边界的锚点回退到字幕起点、scope 不确定按当前章节、ambiguous 不再拦截已输出的事件、
+# 初始暂停后的首个相对变化视为隐含 start。所有回退都会在 review_reasons 中标记。
+lenient_gating: true
 rhythm_anchors_ms: {}
 initial_state:
   pace_tier: unknown

@@ -462,6 +462,27 @@
           ],
           "title": "Empty Timestamp Policy",
           "type": "string"
+        },
+        "source_kind": {
+          "default": "subtitles",
+          "enum": [
+            "subtitles",
+            "whisper"
+          ],
+          "title": "Source Kind",
+          "type": "string"
+        },
+        "transcription_manifest": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Transcription Manifest"
         }
       },
       "required": [

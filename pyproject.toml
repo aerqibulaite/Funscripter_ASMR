@@ -13,5 +13,11 @@ dependencies = ["pydantic==2.13.4", "PyYAML==6.0.3", "numpy==2.4.4", "Pillow==12
 funscripter = "funscripter.cli:main"
 funscripter-gui = "funscripter.gui:main"
 
+[project.optional-dependencies]
+whisper = ["faster-whisper>=1.1,<2"]
+
+[tool.setuptools.package-data]
+funscripter = ["prompts/*.txt", "preview_assets/*"]
+
 [tool.setuptools.packages.find]
 where = ["src"]

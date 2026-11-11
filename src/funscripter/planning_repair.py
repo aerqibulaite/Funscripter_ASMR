@@ -58,7 +58,8 @@ def repair_planning(project_directory, source_directory, output, transport=None)
     atomic_json(output / "planning_run.json", manifest)
     snapshot = source / "semantic_knowledge.json"
     knowledge = json.loads(snapshot.read_text(encoding="utf-8"))["content"] if snapshot.is_file() else None
-    planner = Planner(LLMConfig.model_validate(manifest["config"]), output, transport, knowledge=knowledge)
+    planner = Planner(LLMConfig.model_validate(manifest["config"]), output, transport, knowledge=knowledge,
+                      input_kind=project.config.subtitles.source_kind)
     events = list(data["events"])
     assessments = {row["cue_id"]: row for row in data["cue_assessments"]}
     context_notes = list(data.get("context_notes", []))

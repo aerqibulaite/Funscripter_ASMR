@@ -1,0 +1,10 @@
+# Local faster-whisper / CTranslate2 directory; paths are relative to this YAML.
+model_path: D:/AI/whisper-ct2
+language: ja
+device: cpu
+compute_type: int8
+beam_size: 5
+word_timestamps: true
+vad_filter: false
+condition_on_previous_text: false
+initial_prompt: null

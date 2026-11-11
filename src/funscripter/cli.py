@@ -54,6 +54,18 @@ def main(argv=None):
     create.add_argument("--output", required=True)
     inspect = commands.add_parser("inspect", help="reopen and verify saved project artifacts")
     inspect.add_argument("project")
+    transcribe = commands.add_parser("transcribe", help="transcribe audio using a local faster-whisper model")
+    transcribe.add_argument("audio")
+    transcribe.add_argument("--profile", required=True)
+    transcribe.add_argument("--output", required=True)
+    transcribe.add_argument("--ffmpeg", default="ffmpeg")
+    transcribe.add_argument("--ffprobe", default="ffprobe")
+    transcribe.add_argument("--audio-stream", type=int, default=0)
+    preview = commands.add_parser("preview", help="build an offline interactive audio/script preview")
+    preview.add_argument("project")
+    preview.add_argument("--draft", required=True)
+    preview.add_argument("--planning", help="optional matching planning bundle for original model explanations")
+    preview.add_argument("--output", required=True)
     analyze = commands.add_parser("analyze", help="extract acoustic evidence without changing the project")
     analyze.add_argument("project")
     analyze.add_argument("--output", required=True)
@@ -130,7 +142,14 @@ def main(argv=None):
         stage.add_argument("--task-file", help="optional task JSON outside inputs and output; default beside output")
     args = parser.parse_args(argv)
     try:
-        if args.command == "batch":
+        if args.command == "preview":
+            from .interactive_preview import create_interactive_preview
+            result = create_interactive_preview(args.project, args.draft, args.output, args.planning)
+        elif args.command == "transcribe":
+            from .transcription import transcribe_audio
+            result = transcribe_audio(args.audio, args.output, args.profile, args.ffmpeg,
+                                      args.ffprobe, args.audio_stream)
+        elif args.command == "batch":
             from .batch import run_batch
             result = run_batch(args.config, args.output, execute_stage)
         elif args.command == "batch-status":

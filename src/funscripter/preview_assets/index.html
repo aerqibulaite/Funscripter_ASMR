@@ -1,0 +1,11 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>脚本交互预览</title><link rel="stylesheet" href="viewer.css"></head>
+<body><header><div><span class="eyebrow">AUDIO / SCRIPT</span><h1>脚本交互预览</h1><p id="revision"></p></div><span id="badge"></span></header>
+<main><section id="stats" class="stats" aria-label="曲线统计"></section>
+<section class="card"><div class="heading"><h2>整轨总览</h2><span>点击定位 · 蓝色为曲线，橙色为问题点</span></div><canvas id="overview" height="110" aria-label="整轨动作曲线，点击跳转"></canvas><div class="legend">统计根据脚本点间线性插值计算；静止不一定是问题。位置动画为单轴示意，非设备实测。</div></section>
+<section class="card"><div class="toolbar"><audio id="audio" controls preload="metadata" src="audio.wav"></audio><label>局部范围 <select id="zoom"><option value="10000">10 秒</option><option value="30000" selected>30 秒</option><option value="60000">60 秒</option><option value="0">整轨</option></select></label><label><input id="follow" type="checkbox" checked>跟随播放</label><strong id="clock"></strong></div>
+<div class="toolbar"><button id="back">−5 秒</button><button id="forward">+5 秒</button><button id="loopA">设置 A</button><button id="loopB">设置 B</button><label><input type="checkbox" id="loop">循环 A–B</label><span id="loopText">未设置循环</span></div><p id="audioStatus" role="status"></p>
+<canvas id="detail" height="310" aria-label="局部波形、曲线与速度，点击跳转"></canvas><label class="pan">浏览位置 <input type="range" id="pan" min="0" value="0" step="1"></label><p class="legend">上：音频包络　中：位置 0–100　下：速度（位置单位/秒）。缩放后包络仍使用整轨采样精度。空格播放/暂停，左右键移动 5 秒。</p></section>
+<div class="columns"><section class="card"><div class="heading"><h2>台词与生成依据</h2><div class="indicator"><div id="thumb"></div></div><strong id="position"></strong></div><div id="segment"></div><h3>附近台词</h3><div id="cues"></div><h3>相关事件与情境</h3><div id="events"></div></section>
+<section class="card"><div class="heading"><h2>快速检查</h2><div><button id="prevIssue">上一处</button><button id="nextIssue">下一处</button></div></div><label>查找台词 <input type="search" id="search" placeholder="输入关键词"></label><div id="searchResults"></div><p class="legend">问题列表包含未解析、冲突及连续静止 ≥10 秒的区间。全部草稿仍需复核。</p><div id="issues"></div></section></div></main>
+<script type="application/json" id="previewData">__PREVIEW_DATA__</script><script src="viewer.js"></script></body></html>

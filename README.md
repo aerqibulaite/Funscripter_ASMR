@@ -1,5 +1,7 @@
 # Funscripter ASMR
 
+无需合成视频的[交互式脚本预览](docs/interactive-preview.md)：离线试听、整轨与局部曲线、字幕与生成依据联动、问题跳转和 A/B 循环。桌面“分步测试”中生成并打开。
+
 情境笔记、无显式规则的理解、关键词知识文件和暂停后恢复的新版用法，见 [情境规划与可编辑知识](docs/context-planning.md)。可直接修改 `config/semantic-knowledge.md`。
 
 通用倒计时进度、定次重复、节奏锚点及执行结果说明，见 [通用控制接口](docs/generic-controls.md)。
@@ -156,3 +158,6 @@ NPZ 复用时仍需校验、复制和解压特征矩阵，长轨内存与耗时�
     python tools/run.py restore-revision PROJECT --applied ACCEPTED_DIR --target parent --output NEW_UNDO_DIR
 
 默认未确认外部插值时保护整轨。局部保护同时考虑两条曲线的邻点影响；候选保留边界、原件和所有未选区间，通过检查后才可按 ID 采纳。撤销/重做均新建独立修订，不覆盖原件。离线演示为 tools/demo_revisions.py，规则和边界见 [M5-revisions.md](docs/M5-revisions.md)。
+## 本地语音转写
+
+保留字幕导入，新增独立的本地 Whisper 转写入口；配置、模型格式及使用方式见 [本地 Whisper](docs/local-whisper.md)。

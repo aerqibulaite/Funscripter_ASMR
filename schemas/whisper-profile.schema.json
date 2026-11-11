@@ -1,0 +1,70 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "model_path": {
+      "title": "Model Path",
+      "type": "string"
+    },
+    "language": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": "ja",
+      "title": "Language"
+    },
+    "device": {
+      "default": "cpu",
+      "title": "Device",
+      "type": "string"
+    },
+    "compute_type": {
+      "default": "int8",
+      "title": "Compute Type",
+      "type": "string"
+    },
+    "beam_size": {
+      "default": 5,
+      "maximum": 20,
+      "minimum": 1,
+      "title": "Beam Size",
+      "type": "integer"
+    },
+    "word_timestamps": {
+      "default": true,
+      "title": "Word Timestamps",
+      "type": "boolean"
+    },
+    "vad_filter": {
+      "default": false,
+      "title": "Vad Filter",
+      "type": "boolean"
+    },
+    "condition_on_previous_text": {
+      "default": false,
+      "title": "Condition On Previous Text",
+      "type": "boolean"
+    },
+    "initial_prompt": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Initial Prompt"
+    }
+  },
+  "required": [
+    "model_path"
+  ],
+  "title": "TranscriptionProfile",
+  "type": "object"
+}

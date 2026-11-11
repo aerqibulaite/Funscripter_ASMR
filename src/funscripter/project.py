@@ -63,6 +63,7 @@ def create_project(config_path, output):
         subtitle_copy = "inputs/subtitles." + subtitle_format(config.subtitles)
         shutil.copyfile(subtitle, stage / subtitle_copy)
         timeline = parse_subtitles(subtitle.read_text(encoding=config.subtitles.encoding), duration, config.subtitles)
+        timeline.metadata["input_kind"] = config.subtitles.source_kind
         script, validation = generate(config, duration)
         artifacts = {"media": "media_manifest.json", "subtitles": "subtitles.json",
             "candidates": "utterance_candidates.json", "base": "generated_base.json",
@@ -74,6 +75,20 @@ def create_project(config_path, output):
             "candidates": candidate_document(timeline), "base": script,
             "overrides": {"schema_version": "1.3", "overrides": [], "locked_ranges": []},
             "script": script, "validation": validation}
+        if config.subtitles.source_kind == "whisper":
+            from .transcription import verify_transcription
+            if config.subtitles.offset_ms != 0:
+                raise ValueError("Whisper input uses the source audio clock; offset must be zero")
+            if not config.subtitles.transcription_manifest:
+                raise ValueError("Whisper input requires transcription_manifest")
+            manifest_path = (base / config.subtitles.transcription_manifest).resolve()
+            transcript = verify_transcription(manifest_path, source, subtitle, config.audio_stream)
+            values["subtitles"]["metadata"]["language"] = transcript["language"]
+            values["subtitles"]["metadata"]["timing_status"] = "asr_estimated_not_human_confirmed"
+            for name in ("transcription_manifest.json", "transcript.json"):
+                relative = "inputs/" + name
+                shutil.copyfile(manifest_path if name == "transcription_manifest.json" else manifest_path.parent / name, stage / relative)
+                artifacts[name] = relative
         for key, value in values.items():
             atomic_json(stage / artifacts[key], value)
         (stage / artifacts["config"]).write_text(yaml.safe_dump(config.model_dump(mode="json"),
@@ -193,7 +208,7 @@ def plan_project(directory, output, profile_path=None, resume=False, transport=N
     output = Path(output).resolve()
     if output.is_relative_to(directory):
         raise ValueError("planning output must be outside the source project")
-    planner = Planner(config, output, transport)
+    planner = Planner(config, output, transport, input_kind=project.config.subtitles.source_kind)
     eligible, input_view = planning_inputs(timeline, media["duration_ms"])
     planner.quality_flags = {row["cue_id"]: row["quality_flags"] for row in input_view["cues"]}
     planner.assessments = [{"cue_id": row["cue_id"], "status": "excluded", "reason": "; ".join(row["reasons"])}

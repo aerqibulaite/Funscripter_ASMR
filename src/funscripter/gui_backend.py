@@ -51,17 +51,48 @@ class DesktopController:
     def fresh(self, label):
         return self.workspace / (datetime.now().strftime("%Y%m%d-%H%M%S-") + label + "-" + uuid.uuid4().hex[:8])
 
-    def create(self, audio, subtitles, ffmpeg, encoding, offset, ffprobe="ffprobe", audio_stream="0"):
+    def create(self, audio, subtitles, ffmpeg, encoding, offset, ffprobe="ffprobe", audio_stream="0",
+               source_mode="导入字幕", whisper_profile="", transcription_directory=""):
+        transcription = None
+        if source_mode in ("本地音频转写", "本地 Whisper 转写"):
+            from .transcription import transcribe_audio
+            if int(offset) != 0:
+                raise ValueError("音频转写使用音频原时间轴，请将字幕偏移设为 0")
+            if transcription_directory.strip():
+                transcription = {"output": absolute(transcription_directory)}
+            elif not whisper_profile.strip():
+                raise ValueError("请选择语音模型配置 YAML")
+            else:
+                transcription = self.transcribe(audio, whisper_profile, ffmpeg, ffprobe, audio_stream)
+            subtitles = str(Path(transcription["output"]) / "subtitles.srt")
+            encoding = "utf-8"
+        elif source_mode != "导入字幕":
+            raise ValueError("unknown text input mode")
         values = {"audio": absolute(audio), "subtitles": {"path": absolute(subtitles),
                   "encoding": encoding, "offset_ms": int(offset)}, "ffmpeg": ffmpeg,
                   "ffprobe": ffprobe, "audio_stream": int(audio_stream)}
+        if transcription:
+            values["subtitles"].update(source_kind="whisper", transcription_manifest=str(
+                Path(transcription["output"]) / "transcription_manifest.json"))
         config = Config.model_validate_json(json.dumps(values))
         for path in (config.audio, config.subtitles.path):
             if not Path(path).is_file():
                 raise ValueError(f"输入文件不存在：{path}")
         config_path = self.fresh("input").with_suffix(".yaml")
         config_path.write_text(yaml.safe_dump(config.model_dump(mode="json"), allow_unicode=True), encoding="utf-8")
-        return self.stage("create", config=str(config_path))
+        result = self.stage("create", config=str(config_path))
+        if transcription:
+            result["transcription_output"] = transcription["output"]
+        return result
+
+    def transcribe(self, audio, profile, ffmpeg="ffmpeg", ffprobe="ffprobe", audio_stream="0"):
+        from .transcription import transcribe_audio
+        return transcribe_audio(absolute(audio), self.fresh("transcribe"), absolute(profile),
+                                ffmpeg, ffprobe, int(audio_stream))
+
+    def preview(self, project, draft, planning=None):
+        from .interactive_preview import create_interactive_preview
+        return create_interactive_preview(project, draft, self.fresh("preview"), planning)
 
     def stage(self, command, on_output=None, **values):
         if command not in {"create", "analyze", "plan", "utterance-candidates", "fuse", "diagnostic"}:
@@ -83,6 +114,7 @@ class DesktopController:
     def inspect(project):
         saved, timeline, media, validation = reopen_project(project)
         return {"project_id": saved.project_id, "duration_ms": media["duration_ms"],
+                "text_input_kind": saved.config.subtitles.source_kind,
                 "source_kind": media.get("source_kind", "audio"), "selected_audio_stream": media.get("selected_audio_stream", 0),
                 "timeline_policy": media.get("timeline_policy", "decoded_audio_start_zero"),
                 "cue_count": len(timeline.cues), "issues": timeline.issues, "validation": validation}

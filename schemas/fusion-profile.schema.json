@@ -192,6 +192,11 @@
       "title": "Empty Timestamp Convention Confirmed",
       "type": "boolean"
     },
+    "lenient_gating": {
+      "default": false,
+      "title": "Lenient Gating",
+      "type": "boolean"
+    },
     "audio_period_tolerance": {
       "default": 0.25,
       "maximum": 1,

@@ -13,6 +13,8 @@ class SubtitleConfig(Model):
     offset_ms: int = 0
     apply_lrc_offset: bool = True
     empty_timestamp_policy: Literal["end_hint", "display_clear"] = "end_hint"
+    source_kind: Literal["subtitles", "whisper"] = "subtitles"
+    transcription_manifest: str | None = None
 
 
 class Preset(Model):
@@ -312,6 +314,10 @@ class FusionProfile(Model):
     manual_boundaries_ms: dict[str, int] = Field(default_factory=dict)
     use_empty_timestamp_hints: bool = False
     empty_timestamp_convention_confirmed: bool = False
+    # Less conservative gating: unresolved anchors fall back to the cue start, uncertain scope is read as
+    # the current section, ambiguous assessments no longer block an emitted event, and the first relative
+    # change from the initial paused state implies a start. Every such use is flagged for review.
+    lenient_gating: bool = False
     audio_period_tolerance: float = Field(default=0.25, ge=0, le=1)
     preview_page_ms: int = Field(default=60000, ge=1000, le=600000)
 

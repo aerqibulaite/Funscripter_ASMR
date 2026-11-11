@@ -180,14 +180,16 @@ def build_plan(project, timeline, duration_ms, semantic, outline, audio, candida
             if 0 <= cue.start_ms < duration_ms:
                 schedule.setdefault(cue.start_ms, []).append((None, record))
             continue
-        if version2 and (event["statement_kind"] != "instruction" or assessments[event["cue_id"]]["status"] == "ambiguous"):
+        if version2 and (event["statement_kind"] != "instruction" or (
+                assessments[event["cue_id"]]["status"] == "ambiguous" and not (
+                    profile.lenient_gating and event["intent"] != "unknown"))):
             record.update(status="unresolved", reasons=["non_instruction_or_ambiguous_event"])
             schedule.setdefault(cue.start_ms, []).append((None, record))
             continue
         index = cue_phase[cue.cue_id]
         phase = phases[index]
         time = None
-        if event["scope"] == "uncertain":
+        if event["scope"] == "uncertain" and not profile.lenient_gating:
             record["reasons"].append("uncertain_scope")
         elif event["scope"] == "next_section":
             if index + 1 >= len(phases):
@@ -206,6 +208,12 @@ def build_plan(project, timeline, duration_ms, semantic, outline, audio, candida
             time = boundary["time_ms"]
             record["anchor_source"] = boundary["status"]
             record["boundary_evidence_id"] = boundary["evidence_id"]
+        elif profile.lenient_gating:
+            time = cue.start_ms
+            record["anchor_source"] = "lenient_fallback_cue_start"
+            record["reasons"].append("lenient_anchor_fallback_to_cue_start")
+            if event["scope"] == "uncertain":
+                record["reasons"].append("lenient_uncertain_scope_as_current_section")
         else:
             record["reasons"].append("uncertain_anchor")
         if time is not None and not phase["start_ms"] <= time < phase["end_ms"]:
@@ -310,7 +318,13 @@ def build_plan(project, timeline, duration_ms, semantic, outline, audio, candida
                 else:
                     transition_input = deepcopy(state)
                     default_fields = []
-                    if profile.action_defaults is not None and event["intent"] in ("start", "resume", "continue"):
+                    implicit_start = (profile.lenient_gating and not previous_sources and state["paused"]
+                                      and (event["intent"] in ("increase_rate", "decrease_rate") or (
+                                          event["intent"] == "maintain" and any(
+                                              event[key] != "unknown" for key in ("pace_tier", "amplitude_tier", "motion_style")))))
+                    if implicit_start:
+                        transition_input["paused"] = False
+                    if profile.action_defaults is not None and (event["intent"] in ("start", "resume", "continue") or implicit_start):
                         defaults = profile.action_defaults.model_dump()
                         for key in ("pace_tier", "amplitude_tier", "motion_style"):
                             if transition_input[key] == "unknown" and event[key] == "unknown" and defaults[key] != "unknown":
@@ -335,6 +349,8 @@ def build_plan(project, timeline, duration_ms, semantic, outline, audio, candida
                             active_control.pop("blocked_task", None)
                             if event["intent"] == "start":
                                 active_control.pop("task", None)
+                        if implicit_start:
+                            active_reasons.append("lenient_implicit_start_from_initial_pause")
                         if default_fields:
                             record["configured_default_fields"] = default_fields
                             active_reasons.append("configured_action_defaults:" + ",".join(default_fields))
