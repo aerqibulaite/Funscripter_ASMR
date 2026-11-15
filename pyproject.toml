@@ -14,7 +14,7 @@ funscripter = "funscripter.cli:main"
 funscripter-gui = "funscripter.gui:main"
 
 [project.optional-dependencies]
-whisper = ["faster-whisper>=1.1,<2"]
+whisper = ["faster-whisper>=1.1,<2", "av>=11,<19"]
 
 [tool.setuptools.package-data]
 funscripter = ["prompts/*.txt", "preview_assets/*"]

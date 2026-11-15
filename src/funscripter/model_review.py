@@ -56,6 +56,8 @@ def entries(directory):
             result.append({"key": folder.name, "attempt": attempt, "task": body["task"],
                 "cue_ids": cue_ids, "status": record.get("status", "待校验" if response.exists() else "等待回答"),
                 "error": record.get("error"), "elapsed_seconds": record.get("elapsed_seconds"),
+                "normalizations": record.get("normalizations", []),
+                "accepted_cue_ids": record.get("accepted_cue_ids", []),
                 "request": str(request), "response": str(response) if response.is_file() else None,
                 "updated": max(request.stat().st_mtime, response.stat().st_mtime if response.exists() else 0)})
     return sorted(result, key=lambda row: row["updated"])
@@ -71,7 +73,10 @@ def inspect_entry(directory, entry):
     except (ValueError, TypeError):
         parsed = {}
         answer = str(raw)
-    metadata = response.get("metadata", {})
+    metadata = dict(response.get("metadata", {}))
+    if entry.get("normalizations") or entry.get("accepted_cue_ids"):
+        metadata["program_validation"] = {"normalizations": entry.get("normalizations", []),
+                                          "accepted_cue_ids": entry.get("accepted_cue_ids", [])}
     reasoning = metadata.get("reasoning_content") or metadata.get("thinking")
     return {"request": json.dumps(request, ensure_ascii=False, indent=2), "answer": answer,
             "analysis": analysis_text(request, parsed),

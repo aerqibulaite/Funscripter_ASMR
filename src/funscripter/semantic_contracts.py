@@ -7,6 +7,56 @@ CORE_FIELDS = ["cue_id", "intent", "scope", "anchor", "pace_tier", "amplitude_ti
 V2_FIELDS = ["source_cue_ids", "source_evidence", "statement_kind"]
 
 
+def normalize_batch_v2(result):
+    """Repair review metadata only; never invent an action or its evidence."""
+    changes = []
+    assessments = {row.cue_id: row for row in result.cue_assessments}
+    for event in result.events:
+        assessment = assessments.get(event.cue_id)
+        uncertain = (event.intent == "unknown" or event.scope == "uncertain"
+                     or event.anchor != "cue_start" or event.statement_kind != "instruction"
+                     or (assessment is not None and assessment.status == "ambiguous"))
+        if uncertain and (not event.needs_review or not event.reason.strip()):
+            event.needs_review = True
+            if not event.reason.strip():
+                event.reason = "系统标记复核：事件含未知意图、不确定范围、估计锚点或非直接指令；原模型未提供理由。"
+            changes.append({"cue_id": event.cue_id, "kind": "review_metadata_completed"})
+    anchored = {row.cue_id for row in [*result.events, *result.context_notes]}
+    for assessment in result.cue_assessments:
+        if assessment.status == "processed" and assessment.cue_id not in anchored:
+            assessment.status = "ambiguous"
+            assessment.reason += "；系统标记待复核：模型未提供对应事件或情境笔记，未补造动作。"
+            changes.append({"cue_id": assessment.cue_id, "kind": "orphan_processed_marked_ambiguous"})
+    return changes
+
+
+def validated_prefix_v2(result, targets, context):
+    """Retain a contiguous valid prefix, preserving chronological scene memory."""
+    ids = [cue.cue_id for cue in targets]
+    assessment_ids = [row.cue_id for row in result.cue_assessments]
+    if len(assessment_ids) != len(ids) or set(assessment_ids) != set(ids):
+        return None
+    if any(row.cue_id not in ids for row in [*result.events, *result.context_notes]):
+        return None
+    accepted = []
+    for cue in targets:
+        one = result.model_copy(update={
+            "cue_assessments": [row for row in result.cue_assessments if row.cue_id == cue.cue_id],
+            "events": [row for row in result.events if row.cue_id == cue.cue_id],
+            "context_notes": [row for row in result.context_notes if row.cue_id == cue.cue_id]})
+        try:
+            validate_batch_v2(one, [cue], [*context, *[c for c in targets if c.cue_id != cue.cue_id]])
+        except ValueError:
+            break
+        accepted.append(cue.cue_id)
+    if not accepted or len(accepted) == len(ids):
+        return None
+    return result.model_copy(update={
+        "cue_assessments": [row for row in result.cue_assessments if row.cue_id in accepted],
+        "events": [row for row in result.events if row.cue_id in accepted],
+        "context_notes": [row for row in result.context_notes if row.cue_id in accepted]})
+
+
 def event_identity(event):
     fields = CORE_FIELDS + (V2_FIELDS if "source_cue_ids" in event else [])
     payload = {key: event[key] for key in fields}
@@ -45,10 +95,10 @@ def validate_batch_v2(result, targets, context=(), final=False):
         quoted = set()
         for evidence in note.source_evidence:
             if evidence.cue_id not in sources or not evidence.quote.strip() or evidence.quote not in lookup[evidence.cue_id].text_for_analysis:
-                raise ValueError("semantic_note_evidence_not_in_source")
+                raise ValueError(f"semantic_note_evidence_not_in_source: note={note.cue_id}; source={evidence.cue_id}; quote original input verbatim, without translation or correction")
             quoted.add(evidence.cue_id)
         if quoted != set(sources):
-            raise ValueError("semantic_note_evidence_coverage_missing")
+            raise ValueError(f"semantic_note_evidence_coverage_missing: note={note.cue_id}; missing={sorted(set(sources)-quoted)}; provide original quotes for every declared source")
         if note.control is not None and note.control.sequence_cue_id not in sources:
             raise ValueError("semantic_control_sequence_requires_source_evidence: note=" + note.cue_id
                 + "; sequence_cue_id=" + note.control.sequence_cue_id
@@ -65,14 +115,14 @@ def validate_batch_v2(result, targets, context=(), final=False):
         quoted = set()
         for evidence in event.source_evidence:
             if evidence.cue_id not in sources or not evidence.quote.strip() or evidence.quote not in lookup[evidence.cue_id].text_for_analysis:
-                raise ValueError("semantic_source_evidence_not_in_source_cue")
+                raise ValueError(f"semantic_source_evidence_not_in_source_cue: event={event.cue_id}; source={evidence.cue_id}; quote original input verbatim, without translation or correction")
             quoted.add(evidence.cue_id)
         if quoted != set(sources):
-            raise ValueError("semantic_source_evidence_coverage_missing")
+            raise ValueError(f"semantic_source_evidence_coverage_missing: event={event.cue_id}; missing={sorted(set(sources)-quoted)}; provide original quotes for every declared source")
         explicit = any(getattr(event, field) != "unknown" for field in
                        ("intent", "pace_tier", "amplitude_tier", "motion_style"))
         if (explicit and not event.evidence.strip()) or (event.evidence and event.evidence not in targets[event.cue_id].text_for_analysis):
-            raise ValueError("semantic_evidence_not_in_source_cue")
+            raise ValueError(f"semantic_evidence_not_in_source_cue: event={event.cue_id}; evidence must be a verbatim substring of this target cue, in its original language")
         uncertain = (event.intent == "unknown" or event.scope == "uncertain"
                      or event.anchor != "cue_start" or event.statement_kind != "instruction"
                      or assessments[event.cue_id].status == "ambiguous")

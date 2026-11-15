@@ -90,7 +90,7 @@ class DesktopApp:
                    choices=("导入字幕", "本地音频转写"))
         self.field(frame, 1, "音频 / 视频文件", self.inputs, "audio", browse="audio")
         self.field(frame, 2, "已有字幕（导入字幕模式）", self.inputs, "subtitles", browse="subtitles")
-        self.field(frame, 3, "转写结果目录（转写模式）", self.paths, "transcription", browse="directory")
+        self.field(frame, 3, "已有转写结果（自动回填）", self.paths, "transcription", browse="directory")
         executable = Path("workspace/tools/ffmpeg-binaries/ffmpeg.exe").resolve()
         self.field(frame, 4, "FFmpeg", self.inputs, "ffmpeg", str(executable) if executable.is_file() else "ffmpeg", browse="file")
         self.field(frame, 5, "字幕编码", self.inputs, "encoding", "utf-8-sig")
@@ -102,7 +102,7 @@ class DesktopApp:
         ttk.Separator(frame).grid(row=10, column=0, columnspan=3, sticky="ew", pady=5)
         self.field(frame, 11, "已有项目目录", self.paths, "project", browse="directory")
         self.button(frame, "打开并校验项目", self.inspect).grid(row=12, column=1, sticky="w", pady=5)
-        ttk.Label(frame, text="导入字幕：选择音频与字幕后创建项目。\n音频转写：先选音频，再到“语音模型”执行转写，返回此页创建项目。已有转写结果可直接选择，无需重跑。", wraplength=800).grid(row=13, column=0, columnspan=3, sticky="w", pady=5)
+        ttk.Label(frame, text="导入字幕：选择音频与字幕后创建项目。\n音频转写：先选音频，再到“语音模型”执行转写；成功后结果目录自动回填，再创建项目。\n已有转写结果可直接选择；请勿选择空文件夹作为保存位置。", wraplength=800).grid(row=13, column=0, columnspan=3, sticky="w", pady=5)
 
     def build_speech(self, frame):
         from .transcription import TranscriptionProfile
@@ -226,7 +226,7 @@ class DesktopApp:
         def start():
             values = {key: variable.get().strip() for key, variable in self.inputs.items()}
             if values["source_mode"] == "本地音频转写":
-                values["transcription_directory"] = self.path("transcription")
+                values["transcription_directory"] = self.path("transcription", optional=True) or ""
             self.start("创建项目", lambda: self.controller.create(**values), "project")
         self.guard(start)
 
@@ -284,7 +284,9 @@ class DesktopApp:
             snapshot = self.controller.fresh("whisper-profile").with_suffix(".yaml")
             snapshot.write_text(yaml.safe_dump(profile.model_dump(mode="json"), allow_unicode=True), encoding="utf-8")
             self.speech_status.set("正在转写…")
-            self.start("语音模型音频转写", lambda: self.controller.transcribe(audio, str(snapshot), **settings), "transcription")
+            callback = lambda progress: self.events.put(("transcription_progress", None, progress, None))
+            self.start("语音模型音频转写", lambda: self.controller.transcribe(
+                audio, str(snapshot), on_progress=callback, **settings), "transcription")
         self.guard(start)
 
     def inspect(self):
@@ -326,6 +328,7 @@ class DesktopApp:
         self.busy = True
         for button in self.buttons:
             button.state(["disabled"])
+        self.progress.configure(mode="indeterminate", value=0, maximum=100)
         self.progress.start(12)
         self.status.set("运行中：" + label)
         self.write("开始：" + label)
@@ -344,6 +347,28 @@ class DesktopApp:
         try:
             while True:
                 label, target, result, error = self.events.get_nowait()
+                if label == "transcription_progress":
+                    phase = result["phase"]
+                    names = {"preparing": "核对输入文件", "decoding": "解码音频", "loading_model": "加载语音模型",
+                             "transcribing": "识别音频", "validating": "校验并保存结果", "completed": "转写完成"}
+                    def clock_ms(value):
+                        seconds = int(value / 1000)
+                        return f"{seconds // 3600:02}:{seconds // 60 % 60:02}:{seconds % 60:02}"
+                    duration = result.get("duration_ms")
+                    detail = names.get(phase, phase)
+                    if duration and phase in ("transcribing", "validating", "completed"):
+                        ratio = min(100, 100 * result["processed_ms"] / duration)
+                        self.progress.stop()
+                        self.progress.configure(mode="determinate", maximum=100, value=ratio)
+                        detail += f" {ratio:.1f}%（{clock_ms(result['processed_ms'])} / {clock_ms(duration)}）"
+                    detail += f" · {result['segment_count']}段 · 耗时{clock_ms(result['elapsed_seconds'] * 1000)}"
+                    if result.get("issue_count"):
+                        detail += f" · {result['issue_count']}处待核对"
+                    self.speech_status.set(detail)
+                    self.status.set(detail)
+                    if result.get("text"):
+                        self.write(f"[转写 {clock_ms(result['processed_ms'])}] {result['text']}")
+                    continue
                 if label == "planning_started":
                     self.review.follow(result["output"])
                     self.tabs.select(self.review_tab)

@@ -1,15 +1,22 @@
 # 双机协作进度
 
-最后更新：2026-11-12（Asia/Taipei）。接手工作前先读本文件，再检查本机 Git 状态。
+最后更新：2026-11-13（Asia/Taipei）。接手工作前先读本文件，再检查本机 Git 状态。
 
 ## 当前结论
 
+用户于2026-11-13明确要求停止模型分析：已停止Gemma的8081服务（原PID21292），确认进程退出。本次不自动重启或重跑分析。原任务 `20261112-235501-plan-8ebb0632` 保留，服务中断使任务记录为failed / tokenizer_connection_or_invalid_response；这是主动停止引起。停止说明另存 `workspace/review/20261113-user-stopped-gemma-plan.json`。
+
 代码执行链路已能完成整轨分析和导出；语义到动作的还原尚未验收通过。下一步优先修正融合配置入口、准备阶段与正式执行的区分、动作作用对象误判，再进行较小模型的同素材对照。
+
+2026-11-13新增：已完善原语言/日文转写提示词及中日知识参考，取消强制每句输出动作；程序自动补齐复核元数据，孤立processed标为ambiguous，不补造动作。证据反馈细化到cue，支持保留连续合格前缀；审阅元数据显示补齐记录。详情见 `docs/semantic-language-adaptation.md`。原始证据、来源和覆盖校验保留。新提示词尚未整轨实测，正在运行的旧任务不受这些文件修改影响；重启后从已有转写项目新建规划。
+
+本轮最终验证：231项完整测试通过（32.878秒），另含7项原语言适配、原始响应保留、复核补齐审计和连续前缀恢复测试。30份旧失败响应离线复验中23份经机械补齐后通过，另4份可保留连续合格前缀（累计13条，包含尝试之间重复）；来源错误继续拒绝。该数据不代表新模型准确率或新整轨耗时。当前工作区修改尚未提交推送。
 
 ## 代码同步状态
 
 - 本次记录所在分支：`master`。
 - 本次交接的父提交：`e81cf88`，`feat: add local transcription and interactive script previews`；交接提交号以 `git log -1` 为准。
+- 上述交接已提交并推送为 `c1c66db`。之后新增的9B配置、启动脚本及本文件更新尚未提交推送，不包含在该提交内。
 - 提交前已执行 `git fetch origin`，未发现新增远端提交。
 - 本次交接将下面的代码修复、模型配置、启动脚本和本文件一起提交；另一台拉取后应检查 `git log -1` 与 `git status` 确认版本及本机改动。推送是否完成以实际 Git 输出为准。
 - 最近一次拉取前保留过 stash：`codex-before-pull-e81cf88-20261111`。它是历史备份，不包含此后所有更改；不要直接应用到另一台电脑。
@@ -22,9 +29,23 @@
 | 大纲固定范围合并、校验反馈、失败批次拆分 | 已实现，真实旧任务恢复完成 | `src/funscripter/planning_repair.py`、`tools/recover_outline.py`、`docs/outline-recovery.md` |
 | GUI 简化失败原因展示 | 已实现 | `src/funscripter/gui.py`、`gui_backend.py` |
 | 本地 Whisper 转写与独立提示词 | 远端基准已包含；本机另补 Windows DLL 查找 | `src/funscripter/transcription.py`、`docs/local-whisper.md` |
-| Gemma 独立配置与启动脚本 | 已准备并校验参数，尚未实际推理测试 | `config/llm-gemma-local.yaml`、`launch_gemma_server.cmd` |
+| Gemma 独立配置与启动脚本 | 已加载真实模型，计数接口及短JSON推理通过；尚未完成整轨测试 | `config/llm-gemma-local.yaml`、`launch_gemma_server.cmd` |
+| Qwen3.5-9B 独立配置与启动脚本 | 已按本机实际文件名准备；尚未实际推理测试 | `config/llm-qwen35-9b-local.yaml`、`launch_qwen35_9b_server.cmd` |
+| 首次音频转写的目录提示 | 已区分“已有结果”与“输出位置”，创建项目前拒绝空/不完整目录，并提示先执行转写；尚未提交 | `src/funscripter/gui.py`、`gui_backend.py`、`docs/local-whisper.md` |
+| PyAV文件解码兼容 | 已将Whisper依赖限制为 `av>=11,<19`，本机安装18.1.0；实际WAV解码加GPU推理通过，尚未提交 | `pyproject.toml`、`tests/test_transcription.py`、`docs/local-whisper.md` |
+| 转写分段进度与词级时间偏差 | 已显示阶段、音频进度、分段数、耗时和最近文本；音轨内的词/分段边界偏差保存原值并标记复核，尚未提交 | `src/funscripter/transcription.py`、`gui_backend.py`、`gui.py` |
 
 最近验证：2026-11-12 提交前运行 `.\.venv\Scripts\python.exe -m unittest discover -s tests`，218项全部通过；`git diff --check` 通过。另有真实 Whisper 模型加载、短静音GPU推理及权重SHA256验证通过。测试通过不等于整轨语义还原验收通过。
+
+后续目录提示修改的定向验证：`test_transcription.py` 6项通过，包含空目录/不完整目录的提前拒绝，以及已有成功转写的复用与项目导入。用户正在尝试 Whisper转写加Gemma流程，截图中的失败发生在转写结果缺少字幕文件的创建项目阶段，尚无该组合的真实效果结论。
+
+之后用户实际执行转写，发现 faster-whisper 1.2.1 与 PyAV 19 的 `metadata_errors` 参数不兼容。此前NumPy数组GPU测试绕过了文件解码，未发现此问题。本机已安装经PyPI官方SHA256验证的PyAV18.1.0，并新增真实WAV文件解码回归；更新后的 `test_transcription.py` 7项通过，`pip check`通过。实际本地模型以WAV文件为输入、cuda/bfloat16推理通过，记录为 `workspace/review/20261112-whisper-file-runtime-check.json`。该样本为1秒静音，只验证文件解码和GPU执行，不评价转写准确率。用户需完全关闭并重开工作台，旧进程仍可能持有PyAV19模块。
+
+后续真实转写在第60个分段因 `ASR word timestamp outside segment` 中止。修正为：对音轨范围内的词时间偏差记录问题，不修改原始时间，不终止整轨；非有限、倒置或超出音轨的时间仍拒绝。GUI增加分段进度回调，进度事件不将后台任务误标为完成。定向转写测试11项通过，含实际文件解码、时间偏差保留、非法时间拒绝、阶段回调和GUI忙碌状态；此前失败的整轨尚未用此次修正重跑完成。
+
+最新整体回归：上述修改后运行完整测试，224项全部通过（33.305秒），`git diff --check`通过。当前修改仍在本机工作区，尚未提交推送。
+
+随后任务 `workspace/desktop/20261112-235037-plan-110a233b` 在模型请求前失败：`tokenizer_connection_or_invalid_response`，`request_log.json`为空。配置为Gemma端口8081；沙箱外核对时没有llama-server进程，8080/8081/8082均拒绝连接。已于本次排查中后台启动Gemma服务（检查时PID21292），日志在 `workspace/servers/gemma/20261112-235351.*.log`。实际模型名称匹配，`/apply-template`和`/tokenize`计数通过，短JSON推理通过；不代表失败的整轨已经重跑或完成。此服务只在本机进程存活期间可用，另一台电脑需自行启动。
 
 ## 最新真实素材核查
 
@@ -66,7 +87,7 @@
 - Gemma 4 12B：`gemma-4-12b-it-UD-Q5_K_XL.gguf`；独立配置使用端口8081、上下文32768、thinking=false。16GB本机切换前需释放旧模型占用。
 - Whisper：`D:/AI/whisper-ct2`，`config/whisper-local.yaml` 使用 cuda/bfloat16。权重官方SHA256核对通过；真实模型加载和1秒静音GPU推理通过，尚未评估真实音频识别准确率。
 - 已在 `.venv` 安装 faster-whisper、CTranslate2 及 NVIDIA CUDA 12/cuDNN 运行库。项目代码会查找当前Python环境中NVIDIA包的DLL目录；不依赖修改系统PATH。
-- Qwen3.5-9B 无审查版已查到下载地址；本文件不宣称已经下载、配置或测试。检查另一台及本机实际文件后再更新状态。
+- Qwen3.5-9B 无审查版已下载到 `D:/AI/llama.cpp/models/Huihui-Qwen3.5-9B-abliterated.Q5_K_M_2.gguf`，大小6,522,004,864字节。已读取GGUF元信息确认 qwen35 / 9B / abliterated / Q5_K_M；末尾 `_2` 仅是本机文件名的一部分。独立配置端口8082、上下文32768、thinking=false。尚未运行本模型推理或评估语义质量；另一台需要自行放置模型并核对路径。
 
 ## 下一步与分工
 

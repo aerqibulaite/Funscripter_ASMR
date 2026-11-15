@@ -90,13 +90,20 @@ class DesktopController:
                source_mode="导入字幕", whisper_profile="", transcription_directory=""):
         transcription = None
         if source_mode in ("本地音频转写", "本地 Whisper 转写"):
-            from .transcription import transcribe_audio
             if int(offset) != 0:
                 raise ValueError("音频转写使用音频原时间轴，请将字幕偏移设为 0")
             if transcription_directory.strip():
-                transcription = {"output": absolute(transcription_directory)}
+                directory = Path(absolute(transcription_directory))
+                missing = [name for name in ("subtitles.srt", "transcription_manifest.json", "transcript.json",
+                                             "analysis.wav", "media_manifest.json") if not (directory / name).is_file()]
+                if missing:
+                    raise ValueError("所选目录不是已完成的转写结果，缺少：" + "、".join(missing)
+                                     + "。此处用于导入已有结果，不是转写保存位置。请先到“语音模型”载入配置并点击"
+                                     "“转写输入页所选音频”；完成后结果目录会自动回填，再创建项目。")
+                transcription = {"output": str(directory)}
             elif not whisper_profile.strip():
-                raise ValueError("请选择语音模型配置 YAML")
+                raise ValueError("尚无转写结果。请先到“语音模型”载入配置并点击“转写输入页所选音频”，"
+                                 "完成后返回此页创建项目；已有结果请选择完整的转写结果目录。")
             else:
                 transcription = self.transcribe(audio, whisper_profile, ffmpeg, ffprobe, audio_stream)
             subtitles = str(Path(transcription["output"]) / "subtitles.srt")
@@ -120,10 +127,10 @@ class DesktopController:
             result["transcription_output"] = transcription["output"]
         return result
 
-    def transcribe(self, audio, profile, ffmpeg="ffmpeg", ffprobe="ffprobe", audio_stream="0"):
+    def transcribe(self, audio, profile, ffmpeg="ffmpeg", ffprobe="ffprobe", audio_stream="0", on_progress=None):
         from .transcription import transcribe_audio
         return transcribe_audio(absolute(audio), self.fresh("transcribe"), absolute(profile),
-                                ffmpeg, ffprobe, int(audio_stream))
+                                ffmpeg, ffprobe, int(audio_stream), on_progress=on_progress)
 
     def preview(self, project, draft, planning=None):
         from .interactive_preview import create_interactive_preview

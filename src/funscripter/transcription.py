@@ -4,6 +4,7 @@ import math
 import os
 import shutil
 import tempfile
+import time
 from importlib.metadata import PackageNotFoundError, distribution, version
 from pathlib import Path
 
@@ -94,7 +95,14 @@ def milliseconds(value):
 
 
 def transcribe_audio(audio, output, profile_path, ffmpeg="ffmpeg", ffprobe="ffprobe",
-                     audio_stream=0, model_factory=None):
+                     audio_stream=0, model_factory=None, on_progress=None):
+    started = time.monotonic()
+    progress = {"processed_ms": 0, "duration_ms": None, "segment_count": 0}
+    def report(phase, **updates):
+        progress.update(updates)
+        if on_progress:
+            on_progress({**progress, "phase": phase, "elapsed_seconds": time.monotonic() - started})
+
     source, output = Path(audio).resolve(), Path(output).resolve()
     profile = load_profile(profile_path)
     model_path = Path(profile.model_path)
@@ -107,15 +115,19 @@ def transcribe_audio(audio, output, profile_path, ffmpeg="ffmpeg", ffprobe="ffpr
         raise ValueError("需要本地 CTranslate2 模型目录（model.bin、config.json、tokenizer.json）；.pt 和 Transformers 权重需先转换")
     if output.is_relative_to(model_path):
         raise ValueError("transcription output must be outside the model directory")
+    report("preparing", text="")
     source_hash = sha256(source)
     model_hashes = {str(path.relative_to(model_path)): sha256(path)
                     for path in sorted(model_path.rglob("*")) if path.is_file()}
     output.parent.mkdir(parents=True, exist_ok=True)
     stage = Path(tempfile.mkdtemp(prefix=".funscripter-transcribe-", dir=output.parent))
     try:
+        report("decoding")
         media = decode_audio(source, stage / "analysis.wav", ffmpeg, ffprobe, audio_stream)
         duration = media["duration_ms"]
+        report("loading_model", duration_ms=duration)
         model = load_local_model(profile, model_factory)
+        report("transcribing")
         segments, info = model.transcribe(str(stage / "analysis.wav"), task="transcribe",
             language=profile.language, beam_size=profile.beam_size,
             word_timestamps=profile.word_timestamps, vad_filter=profile.vad_filter,
@@ -132,11 +144,20 @@ def transcribe_audio(audio, output, profile_path, ffmpeg="ffmpeg", ffprobe="ffpr
             words = [{"start_ms": milliseconds(word.start), "end_ms": milliseconds(word.end),
                       "text": word.word, "probability": word.probability}
                      for word in (segment.words or [])]
-            if any(not start <= word["start_ms"] <= word["end_ms"] <= end for word in words):
-                raise ValueError(f"ASR word timestamp outside segment: {index}")
+            for word_index, word in enumerate(words, 1):
+                if not 0 <= word["start_ms"] <= word["end_ms"] <= duration:
+                    raise ValueError(f"invalid ASR word interval: segment={index}, word={word_index}")
+                if not start <= word["start_ms"] <= word["end_ms"] <= end:
+                    word["timing_status"] = "outside_segment_estimate"
+                    issues.append({"segment_id": index, "word_index": word_index,
+                                   "reason": "word_timestamp_outside_segment",
+                                   "segment_start_ms": start, "segment_end_ms": end,
+                                   "word_start_ms": word["start_ms"], "word_end_ms": word["end_ms"]})
             rows.append({"segment_id": index, "start_ms": start, "end_ms": end,
                          "text": raw_text, "words": words,
                          "avg_logprob": segment.avg_logprob, "no_speech_prob": segment.no_speech_prob})
+            report("transcribing", processed_ms=max(progress["processed_ms"], end),
+                   segment_count=index, text=raw_text.strip()[:240], issue_count=len(issues))
             if not raw_text.strip():
                 issues.append({"segment_id": index, "reason": "empty_recognition_segment"})
                 continue
@@ -147,6 +168,7 @@ def transcribe_audio(audio, output, profile_path, ffmpeg="ffmpeg", ffprobe="ffpr
             srt.append(f"{len(srt)+1}\n{timestamp(start)} --> {timestamp(end)}\n{text}\n")
         if not srt:
             raise ValueError("Whisper 未识别到非空文本；未创建项目")
+        report("validating", text="")
         if sha256(source) != source_hash or any(sha256(model_path / name) != value for name, value in model_hashes.items()):
             raise ValueError("source audio or model changed during transcription")
         atomic_json(stage / "transcript.json", {"schema_version": "1", "language": info.language,
@@ -161,11 +183,12 @@ def transcribe_audio(audio, output, profile_path, ffmpeg="ffmpeg", ffprobe="ffpr
             "source_sha256": source_hash, "audio_stream": audio_stream,
             "profile": profile.model_dump(mode="json"), "backend": "faster_whisper",
             "backend_version": runtime_version, "model_hashes": model_hashes,
-            "language": info.language, "duration_ms": duration, "segment_count": len(srt),
+            "language": info.language, "duration_ms": duration, "segment_count": len(srt), "issue_count": len(issues),
             "artifact_hashes": {name: sha256(stage / name) for name in
                 ("transcript.json", "subtitles.srt", "analysis.wav", "media_manifest.json")}}
         atomic_json(stage / "transcription_manifest.json", manifest)
         os.replace(stage, output)
+        report("completed", processed_ms=duration, text="", output=str(output), issue_count=len(issues))
         return {**manifest, "output": str(output)}
     except BaseException:
         shutil.rmtree(stage)

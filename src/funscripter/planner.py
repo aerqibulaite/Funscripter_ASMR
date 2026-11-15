@@ -3,12 +3,13 @@ import hashlib
 import json
 import time
 from pathlib import Path
+from types import SimpleNamespace
 from . import llm, models, planning_inputs, semantic_contracts
 from .models import Outline, SemanticBatchV2
 from .semantic_contracts import validate_batch_v2, event_identity
 from .project import atomic_json
 
-PROMPT_VERSION = "two-pass-9-outline-and-input-profiles"
+PROMPT_VERSION = "two-pass-10-original-language-review-normalization"
 PROMPT_DIRECTORY = Path(__file__).with_name("prompts")
 SYSTEM = (PROMPT_DIRECTORY / "subtitles.txt").read_text(encoding="utf-8")
 
@@ -208,11 +209,31 @@ class Planner:
                 content, metadata = self.transport(self.config, attempt_messages, schema)
                 atomic_json(cache / f"response-{attempt+1}.json", {"content": content, "metadata": metadata})
                 result = model.model_validate_json(content)
+                if model is SemanticBatchV2:
+                    corrections = semantic_contracts.normalize_batch_v2(result)
+                    if corrections:
+                        record["normalizations"] = corrections
+                        atomic_json(cache / f"normalizations-{attempt+1}.json", corrections)
                 if model is Outline:
                     if (len(result.phases) > schema["properties"]["phases"]["maxItems"] or
                         any(len(p.summary) > self.config.outline_summary_chars or len(p.evidence_cue_ids) > 3 for p in result.phases)):
                         raise ValueError("outline_compression_limits_exceeded")
-                validator(result)
+                try:
+                    validator(result)
+                except ValueError as validation_error:
+                    if model is not SemanticBatchV2:
+                        raise
+                    lookup = {row["cue_id"]: SimpleNamespace(cue_id=row["cue_id"], text_for_analysis=row["text"])
+                              for row in [*data["context_cues"], *data["target_cues"]]}
+                    prefix = semantic_contracts.validated_prefix_v2(result,
+                        [lookup[row["cue_id"]] for row in data["target_cues"]],
+                        [lookup[row["cue_id"]] for row in data["context_cues"]])
+                    if prefix is None:
+                        raise
+                    record.update(status="accepted_partial", error=str(validation_error)[:500],
+                                  accepted_cue_ids=[row.cue_id for row in prefix.cue_assessments])
+                    atomic_json(cache / "partial.json", prefix.model_dump(mode="json"))
+                    return prefix
                 atomic_json(accepted, result.model_dump(mode="json"))
                 record["status"] = "accepted"
                 return result
@@ -374,6 +395,8 @@ class Planner:
                                         for cue in targets)
                 previous = []  # Never carry stale state across an unprocessed block.
             else:
+                # Partial acceptance always covers a validated chronological prefix.
+                count = len(result.cue_assessments)
                 self.assessments.extend(row.model_dump(mode="json") for row in result.cue_assessments)
                 self.context_notes.extend(row.model_dump(mode="json") for row in result.context_notes)
                 if any(row.status == "ambiguous" for row in result.cue_assessments):

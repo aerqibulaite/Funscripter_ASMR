@@ -1,0 +1,4 @@
+interface:
+  display_name: "AI破甲 · 左手"
+  short_description: "分析自己的测试程序，在副本上修改，保留证据并实际运行验证结果"
+  default_prompt: "用 $ai-pojia 分析这个我自己编写的测试 DEMO，在副本上完成指定修改并实际运行验证。"

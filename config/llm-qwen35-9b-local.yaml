@@ -1,0 +1,23 @@
+# Local model: D:/AI/llama.cpp/models/Huihui-Qwen3.5-9B-abliterated.Q5_K_M_2.gguf
+# Paired with launch_qwen35_9b_server.cmd (port 8082, one slot, 32768 context).
+# Stop other GPU model servers before starting this model to free GPU memory.
+backend: llama_cpp
+base_url: http://127.0.0.1:8082
+model_id: Huihui-Qwen3.5-9B-abliterated-Q5_K_M
+model_revision: local-gguf
+quantization: Q5_K_M
+api_key_env: null
+timeout_seconds: 600.0
+max_retries: 1
+context_budget_tokens: 32768
+token_count_method: server
+outline_max_phases: 8
+outline_summary_chars: 160
+max_output_tokens: 4096
+safety_tokens: 1024
+max_chunk_cues: 8
+context_cues: 2
+semantic_knowledge_file: semantic-knowledge.md
+thinking: false
+temperature: 0.2
+top_p: 0.9
