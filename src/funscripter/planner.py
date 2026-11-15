@@ -113,6 +113,14 @@ class Planner:
         combined = rules + phase + recent + list(controls.values())
         return list({json.dumps(row, sort_keys=True, ensure_ascii=False): row for row in combined}.values())
 
+    def semantic_context(self, cues, targets, local_context, memory, previous):
+        """Keep verbatim sources for every retained historical event and note."""
+        target_ids = {cue.cue_id for cue in targets}
+        source_ids = {cue.cue_id for cue in local_context}
+        for row in [*memory, *previous]:
+            source_ids.update(row["source_cue_ids"])
+        return [cue for cue in cues if cue.cue_id in source_ids and cue.cue_id not in target_ids]
+
     def messages(self, task, data, model):
         schema = model.model_json_schema()
         instruction = ""
@@ -309,13 +317,9 @@ class Planner:
                 count = min(self.config.max_chunk_cues, phase_end - index + 1)
                 while count:
                     targets = cues[index:index+count]
-                    context = cues[max(0,index-radius):index] + cues[index+count:index+count+radius]
+                    local_context = cues[max(0,index-radius):index] + cues[index+count:index+count+radius]
                     memory = self.scene_memory()
-                    memory_ids = {cid for note in memory for cid in note["source_cue_ids"]}
-                    # Include original evidence for persistent rules, even outside the local window.
-                    target_ids = {cue.cue_id for cue in targets}
-                    context = list({cue.cue_id: cue for cue in context + [
-                        cue for cue in cues if cue.cue_id in memory_ids and cue.cue_id not in target_ids]}.values())
+                    context = self.semantic_context(cues, targets, local_context, memory, previous)
                     data = {"semantic_contract_version": "1.4", "global_outline": phases,
                             "target_cues": [self.cue_data(c) for c in targets],
                             "context_cues": [self.cue_data(c) for c in context], "previous_accepted_events": previous,
@@ -324,6 +328,9 @@ class Planner:
                     while data["previous_accepted_events"] and not self.fits("semantic", data, SemanticBatchV2):
                         data["previous_accepted_events"] = data["previous_accepted_events"][1:]
                         data["previous_events_omitted_for_budget"] = data.get("previous_events_omitted_for_budget", 0) + 1
+                        context = self.semantic_context(cues, targets, local_context, memory,
+                                                        data["previous_accepted_events"])
+                        data["context_cues"] = [self.cue_data(c) for c in context]
                     if self.fits("semantic", data, SemanticBatchV2):
                         break
                     count -= 1
@@ -336,8 +343,11 @@ class Planner:
                 for keep in range(len(previous)-1, -1, -1):
                     reduced = dict(data, previous_accepted_events=previous[-keep:] if keep else [],
                                    previous_events_omitted_for_budget=len(previous)-keep)
+                    reduced_context = self.semantic_context(cues, targets, local_context, memory,
+                                                            reduced["previous_accepted_events"])
+                    reduced["context_cues"] = [self.cue_data(c) for c in reduced_context]
                     if self.fits("semantic", reduced, SemanticBatchV2):
-                        data, count = reduced, len(targets)
+                        data, context, count = reduced, reduced_context, len(targets)
                         break
             if not count:
                 failures.extend({"cue_id": cue.cue_id, "reason": "semantic_context_budget_exceeded"} for cue in cues[index:])

@@ -88,6 +88,7 @@ def validate_batch_v2(result, targets, context=(), final=False):
             raise ValueError(f"semantic_processed_assessment_without_event: cue_id={cue_id}; processed requires an event or context_note anchored to this cue; if neither exists use no_new_information")
     indices = {cue_id: index for index, cue_id in enumerate(targets)}
     result.events.sort(key=lambda event: indices[event.cue_id])
+    result.context_notes.sort(key=lambda note: indices[note.cue_id])
 
 
 def parse_saved_v2(data, cues, eligible_ids):
